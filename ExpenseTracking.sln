@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExpenseTracking.Api", "ExpenseTracking.Api\ExpenseTracking.Api.csproj", "{C57CB8E0-EDFF-45CC-B435-216A13C5D28C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C57CB8E0-EDFF-45CC-B435-216A13C5D28C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C57CB8E0-EDFF-45CC-B435-216A13C5D28C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C57CB8E0-EDFF-45CC-B435-216A13C5D28C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C57CB8E0-EDFF-45CC-B435-216A13C5D28C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E813D5A-1F92-47DC-A94E-64C0754B3615}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E813D5A-1F92-47DC-A94E-64C0754B3615}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E813D5A-1F92-47DC-A94E-64C0754B3615}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E813D5A-1F92-47DC-A94E-64C0754B3615}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

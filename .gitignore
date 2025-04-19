@@ -1,0 +1,95 @@
+# ===================
+# Visual Studio Code
+# ===================
+.vscode/
+.vs/
+history/
+*.code-snippets
+
+# ===============
+# Build results
+# ===============
+[Dd]ebug/
+[Rr]elease/
+[Bb]in/
+[Oo]bj/
+artifacts/
+publish/
+
+# ====================
+# User-specific files
+# ====================
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ====================
+# Visual Studio
+# ====================
+*.sln.ide
+*.sln.docstates
+*.ncb
+*.sdf
+*.opensdf
+*.aps
+*.pch
+*.idb
+*.ilk
+*.log
+*.obj
+
+# ==================
+# Config files
+# ==================
+appsettings.*.json
+.env
+.env.*
+
+# ====================
+# Test output & debug
+# ====================
+TestResults/
+*.trx
+*.pdb
+*.dmp
+
+# ====================
+# NuGet related
+# ====================
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+packages/
+!packages/build/
+
+# ====================
+# Temporary files
+# ====================
+*.tmp
+*.temp
+*.bak
+*.cache
+*.pidb
+
+# ====================
+# Database files
+# ====================
+*.db
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+
+# ====================
+# Coverage
+# ====================
+coverage/
+
+# ====================
+# Windows specific
+# ====================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
