@@ -1,6 +1,7 @@
+using System.Reflection;
 using AutoMapper;
 using ExpenseTracking.Api.Context;
-using ExpenseTracking.Api.Domain;
+using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Api.Impl.Validation;
 using ExpenseTracking.Api.Mapper;
 using FluentValidation.AspNetCore;
@@ -28,6 +29,8 @@ public class Startup
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(Configuration.GetConnectionString("MsSqlConnection")));
+
+        services.AddMediatR(x => x.RegisterServicesFromAssemblies(typeof(CreateEmployeeCommand).GetTypeInfo().Assembly));
 
         services.AddSwaggerGen();
     }

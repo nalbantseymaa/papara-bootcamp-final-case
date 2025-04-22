@@ -1,6 +1,7 @@
-namespace ExpenseTracking.Api.Impl.Validation;
 using FluentValidation;
 using ExpenseTracking.Schema;
+
+namespace ExpenseTracking.Api.Impl.Validation;
 
 public class EmployeeValidator : AbstractValidator<EmployeeRequest>
 {

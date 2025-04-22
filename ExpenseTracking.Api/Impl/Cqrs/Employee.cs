@@ -2,7 +2,7 @@ using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
 
-namespace Namespace.ExpenseTracking.Api.Impl.Cqrs.Employee;
+namespace ExpenseTracking.Api.Impl.Cqrs;
 
 public record GetAllEmployeesQuery : IRequest<ApiResponse<List<EmployeeResponse>>>;
 public record GetEmployeeByIdQuery(int Id) : IRequest<ApiResponse<EmployeeResponse>>;

@@ -1,30 +1,31 @@
 using AutoMapper;
 using ExpenseTracking.Api.Context;
+using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Namespace.ExpenseTracking.Api.Impl.Cqrs.Employee;
 
-namespace Net.Api.Impl.Query;
+namespace ExpenseTracking.Api.Impl.Query;
 
 public class EmployeeQueryHandler :
 IRequestHandler<GetAllEmployeesQuery, ApiResponse<List<EmployeeResponse>>>,
 IRequestHandler<GetEmployeeByIdQuery, ApiResponse<EmployeeResponse>>
 {
-    private readonly AppDbContext context;
+    private readonly AppDbContext dbcontext;
     private readonly IMapper mapper;
 
-    public EmployeeQueryHandler(AppDbContext context, IMapper mapper)
+
+    public EmployeeQueryHandler(AppDbContext dbcontext, IMapper mapper)
     {
-        this.context = context;
+        this.dbcontext = dbcontext;
         this.mapper = mapper;
     }
 
     public async Task<ApiResponse<List<EmployeeResponse>>> Handle(GetAllEmployeesQuery request, CancellationToken cancellationToken)
     {
 
-        var Employees = await context.Employees
+        var Employees = await dbcontext.Employees
         .ToListAsync(cancellationToken);
         var mapped = mapper.Map<List<EmployeeResponse>>(Employees);
 
@@ -33,7 +34,7 @@ IRequestHandler<GetEmployeeByIdQuery, ApiResponse<EmployeeResponse>>
 
     public async Task<ApiResponse<EmployeeResponse>> Handle(GetEmployeeByIdQuery request, CancellationToken cancellationToken)
     {
-        var employee = await context.Employees
+        var employee = await dbcontext.Employees
             .Include(x => x.Addresses)
             .Include(x => x.Phones)
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);

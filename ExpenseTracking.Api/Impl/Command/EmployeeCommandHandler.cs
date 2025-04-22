@@ -1,14 +1,14 @@
 using AutoMapper;
 using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Domain;
+using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Namespace.ExpenseTracking.Api.Impl.Cqrs.Employee;
 
 
-namespace Net.Api.Impl.Query;
+namespace ExpenseTracking.Api.Impl.Command;
 
 public class EmployeeCommandHandler :
 IRequestHandler<CreateEmployeeCommand, ApiResponse<EmployeeResponse>>,

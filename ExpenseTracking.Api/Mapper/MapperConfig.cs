@@ -14,6 +14,9 @@ public class MapperConfig : Profile
           .ForMember(dest => dest.EmployeeNumber, opt => opt.MapFrom(src =>
               $"{src.FirstName} {(string.IsNullOrWhiteSpace(src.MiddleName) ? "" : src.MiddleName + " ")}{src.LastName}"));
 
+        CreateMap<CategoryRequest, ExpenseCategory>();
+        CreateMap<ExpenseCategory, CategoryResponse>();
+
 
 
 
