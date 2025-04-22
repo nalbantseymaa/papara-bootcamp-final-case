@@ -1,10 +1,23 @@
+using ExpenseTracking.Api.Context;
+using Microsoft.EntityFrameworkCore;
+
 namespace ExpenseTracking.Api;
 
 public class Startup
 {
+    public IConfiguration Configuration { get; }
+
+    public Startup(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddControllers();
+
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseSqlServer(Configuration.GetConnectionString("MsSqlConnection")));
 
         services.AddSwaggerGen();
     }
