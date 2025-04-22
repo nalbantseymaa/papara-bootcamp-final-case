@@ -8,7 +8,6 @@ public class Employee : BaseEntity
 {
     public long UserId { get; set; }
     public long DepartmentId { get; set; }
-    public long? ManagedDepartmentId { get; set; }
     public string FirstName { get; set; }
     public string? MiddleName { get; set; }
     public string LastName { get; set; }
@@ -23,7 +22,6 @@ public class Employee : BaseEntity
 
     public virtual User User { get; set; }
     public virtual Department Department { get; set; }
-    public virtual Department? ManagedDepartment { get; set; }
     public virtual ICollection<Address> Addresses { get; set; }
     public virtual ICollection<Phone> Phones { get; set; }
     public virtual ICollection<Expense> Expenses { get; set; }
@@ -44,7 +42,6 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
 
         builder.Property(x => x.UserId).IsRequired();
         builder.Property(x => x.DepartmentId).IsRequired();
-        builder.Property(x => x.ManagedDepartmentId).IsRequired(false);
         builder.Property(x => x.FirstName).IsRequired().HasMaxLength(100);
         builder.Property(x => x.MiddleName).IsRequired(false).HasMaxLength(100);
         builder.Property(x => x.LastName).IsRequired().HasMaxLength(100);

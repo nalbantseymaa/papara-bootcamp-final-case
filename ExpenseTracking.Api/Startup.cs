@@ -1,4 +1,9 @@
+using AutoMapper;
 using ExpenseTracking.Api.Context;
+using ExpenseTracking.Api.Domain;
+using ExpenseTracking.Api.Impl.Validation;
+using ExpenseTracking.Api.Mapper;
+using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseTracking.Api;
@@ -15,6 +20,11 @@ public class Startup
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddControllers();
+        services.AddControllers().AddFluentValidation(x =>
+     {
+         x.RegisterValidatorsFromAssemblyContaining<EmployeeValidator>();
+     });
+        services.AddSingleton(new MapperConfiguration(x => x.AddProfile(new MapperConfig())).CreateMapper());
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(Configuration.GetConnectionString("MsSqlConnection")));

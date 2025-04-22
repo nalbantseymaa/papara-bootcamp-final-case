@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExpenseTracking.Api", "Expe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExpenseTracking.Base", "ExpenseTracking.Base\ExpenseTracking.Base.csproj", "{C3821667-1E18-4940-8C89-079BF1572E75}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExpenseTracking.Schema", "ExpenseTracking.Schema\ExpenseTracking.Schema.csproj", "{E5C450BF-6910-40A2-8D51-F646C20CBE9F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,5 +30,9 @@ Global
 		{C3821667-1E18-4940-8C89-079BF1572E75}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C3821667-1E18-4940-8C89-079BF1572E75}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C3821667-1E18-4940-8C89-079BF1572E75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E5C450BF-6910-40A2-8D51-F646C20CBE9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E5C450BF-6910-40A2-8D51-F646C20CBE9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E5C450BF-6910-40A2-8D51-F646C20CBE9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E5C450BF-6910-40A2-8D51-F646C20CBE9F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

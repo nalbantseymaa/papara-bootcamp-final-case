@@ -33,17 +33,16 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
         builder.Property(x => x.Description).IsRequired(false).HasMaxLength(500);
         builder.Property(x => x.ManagerId).IsRequired(true);
 
+        builder
+       .HasOne(d => d.Manager)
+       .WithMany()
+       .HasForeignKey(d => d.ManagerId)
+       .IsRequired()
+       .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasMany(d => d.Employees)
                .WithOne(e => e.Department)
-               .HasForeignKey(e => e.DepartmentId)
-               .IsRequired(true)
-               .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne(d => d.Manager)
-               .WithOne()
-               .HasForeignKey<Department>(d => d.ManagerId)
-               .IsRequired(true)
-               .OnDelete(DeleteBehavior.Restrict);
+               .HasForeignKey(e => e.DepartmentId);
 
         builder.HasIndex(x => x.Name).IsUnique(true);
     }
