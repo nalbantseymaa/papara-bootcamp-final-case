@@ -26,4 +26,8 @@ public class ExpenseResponse : BaseResponse
     public DateTime ExpenseDate { get; set; }
 
 }
+public class RejectExpenseRequest
+{
+    public string RejectionReason { get; set; }
+}
 
