@@ -17,6 +17,16 @@ public class MapperConfig : Profile
         CreateMap<CategoryRequest, ExpenseCategory>();
         CreateMap<ExpenseCategory, CategoryResponse>();
 
+        CreateMap<PaymentMethodRequest, PaymentMethod>();
+        CreateMap<PaymentMethod, PaymentMethodResponse>();
+
+        CreateMap<DepartmentRequest, Department>();
+        CreateMap<Department, DepartmentResponse>();
+
+        CreateMap<ManagerRequest, Manager>();
+        CreateMap<Manager, ManagerResponse>().ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src =>
+            $"{src.FirstName} {(string.IsNullOrWhiteSpace(src.MiddleName) ? "" : src.MiddleName + " ")}{src.LastName}"));
+
 
 
 
