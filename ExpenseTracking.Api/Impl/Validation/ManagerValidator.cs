@@ -10,9 +10,6 @@ public class ManagerRequestValidator : AbstractValidator<ManagerRequest>
 
     public ManagerRequestValidator()
     {
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("User ID is required")
-            .GreaterThan(0).WithMessage("User ID must be greater than 0");
 
         RuleFor(x => x.FirstName)
             .NotEmpty().WithMessage("First name is required")
@@ -50,7 +47,6 @@ public class ManagerRequestValidator : AbstractValidator<ManagerRequest>
 
         try
         {
-
             if (!Regex.IsMatch(email, EMAIL_PATTERN))
                 return false;
 

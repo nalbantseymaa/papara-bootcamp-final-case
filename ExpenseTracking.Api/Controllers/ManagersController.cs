@@ -35,9 +35,9 @@ public class ManagersController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ApiResponse<ManagerResponse>> Post([FromBody] ManagerRequest Manager)
+    public async Task<ApiResponse<CreateManagerResponse>> Post([FromBody] CreateManagerRequest request)
     {
-        var operation = new CreateManagerCommand(Manager);
+        var operation = new CreateManagerCommand(request.User, request.Manager);
         var result = await mediator.Send(operation);
         return result;
     }

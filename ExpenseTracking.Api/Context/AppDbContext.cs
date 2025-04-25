@@ -17,10 +17,21 @@ public class AppDbContext : DbContext
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
+
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<User>()
+        .ToTable("Users")
+        .HasKey(u => u.Id);
+
+        modelBuilder.Entity<Employee>()
+            .ToTable("EmployeeUsers");
+
+        modelBuilder.Entity<Manager>()
+            .ToTable("ManagerUsers");
+
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         base.OnModelCreating(modelBuilder);
     }

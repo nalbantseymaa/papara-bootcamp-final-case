@@ -11,16 +11,16 @@ public class ApiResponse
 
     public ApiResponse(string message = null)
     {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            Success = true;
-        }
-        else
-        {
-            Success = false;
-            Message = message;
-        }
+        Success = string.IsNullOrWhiteSpace(message);
+        Message = message;
     }
+
+    public ApiResponse(bool isSuccess, string message)
+    {
+        Success = isSuccess;
+        Message = message;
+    }
+
     public bool Success { get; set; }
     public string Message { get; set; }
     public DateTime ServerDate { get; set; } = DateTime.UtcNow;

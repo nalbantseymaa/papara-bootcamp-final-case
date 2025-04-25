@@ -24,7 +24,6 @@ IRequestHandler<GetManagerByIdQuery, ApiResponse<ManagerResponse>>
 
     public async Task<ApiResponse<List<ManagerResponse>>> Handle(GetAllManagersQuery request, CancellationToken cancellationToken)
     {
-
         var Managers = await dbcontext.Managers
         .ToListAsync(cancellationToken);
         var mapped = mapper.Map<List<ManagerResponse>>(Managers);
