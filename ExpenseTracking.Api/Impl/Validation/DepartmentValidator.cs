@@ -18,7 +18,9 @@ public class DepartmentRequestValidator : AbstractValidator<DepartmentRequest>
             .When(x => !string.IsNullOrEmpty(x.Description));
 
         RuleFor(x => x.ManagerId)
-            .NotEmpty().WithMessage("Manager ID is required")
-            .GreaterThan(0).WithMessage("Manager ID must be greater than 0");
+        .GreaterThan(0)
+        .When(x => x.ManagerId.HasValue)
+        .WithMessage("Manager ID must be greater than 0 ");
+
     }
 }

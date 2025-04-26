@@ -25,78 +25,88 @@ public class DepartmentCommandHandler :
 
     public async Task<ApiResponse<DepartmentResponse>> Handle(CreateDepartmentCommand request, CancellationToken cancellationToken)
     {
-        var mapped = mapper.Map<Department>(request.Department);
+        if (request?.Department == null)
+            return new ApiResponse<DepartmentResponse>("Department data is required");
 
-        var entity = await dbContext.AddAsync(mapped, cancellationToken);
+        if (await dbContext.Departments
+            .AnyAsync(d => d.Name == request.Department.Name && d.IsActive, cancellationToken))
+            return new ApiResponse<DepartmentResponse>("Department already exists");
+
+        if (request.Department.ManagerId.HasValue)
+        {
+            var manager = await dbContext.Managers
+                .FirstOrDefaultAsync(m => m.Id == request.Department.ManagerId.Value, cancellationToken);
+
+            if (manager == null)
+                return new ApiResponse<DepartmentResponse>("Manager not found");
+
+            if (!manager.IsActive)
+                return new ApiResponse<DepartmentResponse>("Manager is inactive");
+        }
+
+        var department = mapper.Map<Department>(request.Department);
+        department.IsActive = true;
+        department.InsertedDate = DateTime.UtcNow;
+        department.InsertedUser = "system";
+
+        await dbContext.Departments.AddAsync(department, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var response = mapper.Map<DepartmentResponse>(entity.Entity);
+        var response = mapper.Map<DepartmentResponse>(department);
         return new ApiResponse<DepartmentResponse>(response);
     }
 
     public async Task<ApiResponse> Handle(UpdateDepartmentCommand request, CancellationToken cancellationToken)
     {
-        var entity = await dbContext.Departments.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+        var department = await dbContext.Departments
+            .FirstOrDefaultAsync(d => d.Id == request.Id && d.IsActive, cancellationToken);
+        if (department == null || request.Department == null)
+            return new ApiResponse("Department not found or data is required");
 
-        if (entity == null)
-            return new ApiResponse("Department not found");
+        if (request.Department.Name != department.Name) department.Name = request.Department.Name;
+        if (!string.IsNullOrWhiteSpace(request.Department.Description) && request.Department.Description != department.Description)
+            department.Description = request.Department.Description;
 
-        if (!entity.IsActive)
-            return new ApiResponse("Department is not active");
-
-        if (string.IsNullOrWhiteSpace(request.Department.Name))
-            return new ApiResponse("Department name is required");
-
-        if (request.Department.ManagerId <= 0)
-            return new ApiResponse("Valid Manager ID is required");
-
-        var managerExists = await dbContext.Employees
-            .AnyAsync(x => x.Id == request.Department.ManagerId && x.IsActive, cancellationToken);
-
-        if (!managerExists)
-            return new ApiResponse("Manager not found or not active");
-
-        entity.Name = request.Department.Name;
-        entity.ManagerId = request.Department.ManagerId;
-
-        if (!string.IsNullOrWhiteSpace(request.Department.Description))
+        if (request.Department.ManagerId.HasValue)
         {
-            entity.Description = request.Department.Description;
+            var managerEmployee = await dbContext.Employees
+                .FirstOrDefaultAsync(e => e.Id == request.Department.ManagerId.Value && e.IsActive, cancellationToken);
+            if (managerEmployee == null) return new ApiResponse("Manager not found or inactive");
+            department.ManagerId = managerEmployee.Id;
         }
-
+        else
+            department.ManagerId = null;
+        department.UpdatedDate = DateTime.UtcNow;
+        department.UpdatedUser = "system";
         await dbContext.SaveChangesAsync(cancellationToken);
-        return new ApiResponse("Department successfully updated");
+        return new ApiResponse(true, "Department successfully updated");
     }
 
     public async Task<ApiResponse> Handle(DeleteDepartmentCommand request, CancellationToken cancellationToken)
     {
-        // Get department with related entities
-        var entity = await dbContext.Departments
-            .Include(x => x.Employees)
-            .Include(x => x.Addresses)
-            .Include(x => x.Phones)
-            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+        var department = await dbContext.Departments
+            .Include(d => d.Employees)
+            .FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken);
 
-        if (entity == null)
+        if (department == null)
             return new ApiResponse("Department not found");
 
-        if (!entity.IsActive)
+        if (!department.IsActive)
             return new ApiResponse("Department is already inactive");
 
-        if (entity.Employees.Any(e => e.IsActive))
+        var activeEmployees = await dbContext.Employees
+            .Where(e => e.DepartmentId == department.Id && e.IsActive)
+            .CountAsync(cancellationToken);
+
+        if (activeEmployees > 0)
             return new ApiResponse("Cannot delete department with active employees");
 
-        if (entity.Addresses.Any())
-            return new ApiResponse("Cannot delete department with associated addresses");
-
-        if (entity.Phones.Any())
-            return new ApiResponse("Cannot delete department with associated phone numbers");
-
-        entity.IsActive = false;
-        entity.UpdatedDate = DateTime.UtcNow;
-        entity.UpdatedUser = "System";
+        department.IsActive = false;
+        department.UpdatedDate = DateTime.UtcNow;
+        department.UpdatedUser = "system";
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        return new ApiResponse("Department successfully deleted");
+        return new ApiResponse(true, "Department successfully deleted");
     }
+
 }

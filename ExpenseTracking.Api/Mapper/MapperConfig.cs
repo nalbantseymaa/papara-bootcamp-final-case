@@ -11,8 +11,12 @@ public class MapperConfig : Profile
     {
         CreateMap<EmployeeRequest, Employee>();
         CreateMap<Employee, EmployeeResponse>()
-          .ForMember(dest => dest.EmployeeNumber, opt => opt.MapFrom(src =>
-              $"{src.FirstName} {(string.IsNullOrWhiteSpace(src.MiddleName) ? "" : src.MiddleName + " ")}{src.LastName}"));
+      .ForMember(dest => dest.EmployeeName, opt => opt.MapFrom(src =>
+          $"{src.FirstName} {(string.IsNullOrWhiteSpace(src.MiddleName) ? "" : src.MiddleName + " ")}{src.LastName}"));
+
+        // .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.Id));
+
+
 
         CreateMap<UserRequest, Employee>()
             .ForMember(dest => dest.UserName,
@@ -37,6 +41,12 @@ public class MapperConfig : Profile
 
         CreateMap<DepartmentRequest, Department>();
         CreateMap<Department, DepartmentResponse>();
+
+
+
+
+        CreateMap<PhoneRequest, Phone>();
+        CreateMap<Phone, PhoneResponse>();
 
         CreateMap<AddressRequest, Address>();
         CreateMap<Address, AddressResponse>();

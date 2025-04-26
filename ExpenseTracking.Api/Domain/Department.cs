@@ -8,7 +8,7 @@ public class Department : BaseEntity
 {
     public string Name { get; set; }
     public string? Description { get; set; }
-    public long ManagerId { get; set; }
+    public long? ManagerId { get; set; }
 
     public virtual Employee Manager { get; set; }
     public virtual ICollection<Phone> Phones { get; set; }
@@ -31,18 +31,18 @@ public class DepartmentConfiguration : IEntityTypeConfiguration<Department>
 
         builder.Property(x => x.Name).IsRequired().HasMaxLength(100);
         builder.Property(x => x.Description).IsRequired(false).HasMaxLength(500);
-        builder.Property(x => x.ManagerId).IsRequired(true);
+        builder.Property(x => x.ManagerId).IsRequired(false);
 
-        builder
-       .HasOne(d => d.Manager)
-       .WithMany()
-       .HasForeignKey(d => d.ManagerId)
-       .IsRequired()
-       .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(d => d.Manager)
+               .WithMany(m => m.ManagedDepartments)
+               .HasForeignKey(d => d.ManagerId)
+               .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasMany(d => d.Employees)
-               .WithOne(e => e.Department)
-               .HasForeignKey(e => e.DepartmentId);
+              .WithOne(e => e.Department)
+              .HasForeignKey(e => e.DepartmentId)
+              .IsRequired()
+              .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.Name).IsUnique(true);
     }
