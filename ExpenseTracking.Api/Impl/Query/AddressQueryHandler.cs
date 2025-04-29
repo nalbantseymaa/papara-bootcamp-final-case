@@ -10,11 +10,11 @@ namespace ExpenseTracking.Api.Impl.Query;
 
 public class AddressQueryHandler :
 IRequestHandler<GetAllAdressesQuery, ApiResponse<List<AddressResponse>>>,
-IRequestHandler<GetAdressesByIdQuery, ApiResponse<AddressResponse>>
+IRequestHandler<GetAdressesByIdQuery, ApiResponse<AddressResponse>>,
+IRequestHandler<GetAdressesByParametersQuery, ApiResponse<List<AddressResponse>>>
 {
     private readonly AppDbContext dbcontext;
     private readonly IMapper mapper;
-
 
     public AddressQueryHandler(AppDbContext dbcontext, IMapper mapper)
     {
@@ -45,4 +45,26 @@ IRequestHandler<GetAdressesByIdQuery, ApiResponse<AddressResponse>>
         var mapped = mapper.Map<AddressResponse>(Address);
         return new ApiResponse<AddressResponse>(mapped);
     }
+
+    public async Task<ApiResponse<List<AddressResponse>>> Handle(GetAdressesByParametersQuery request, CancellationToken cancellationToken)
+    {
+        var query = dbcontext.Addresses.AsQueryable();
+
+        if (!string.IsNullOrEmpty(request.City))
+            query = query.Where(a => a.City.ToLower() == request.City.ToLower());
+
+        if (!string.IsNullOrEmpty(request.ZipCode))
+            query = query.Where(a => a.ZipCode == request.ZipCode);
+
+        if (request.IsDefault.HasValue)
+            query = query.Where(a => a.IsDefault == request.IsDefault.Value);
+
+        var data = await query
+            .Where(x => x.IsActive)
+            .ToListAsync(cancellationToken);
+
+        var mapped = mapper.Map<List<AddressResponse>>(data);
+        return new ApiResponse<List<AddressResponse>>(mapped);
+    }
+
 }

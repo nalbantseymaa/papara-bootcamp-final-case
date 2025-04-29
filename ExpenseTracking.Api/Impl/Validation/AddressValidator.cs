@@ -1,3 +1,4 @@
+using System.Data;
 using ExpenseTracking.Schema;
 using FluentValidation;
 
@@ -7,6 +8,7 @@ public class AddressValidator : AbstractValidator<AddressRequest>
 {
     public AddressValidator()
     {
+        RuleFor(x => x.IsDefault).NotNull().WithMessage("Please enter a valid default address status");
         RuleFor(x => x.Street).NotEmpty().Length(2, 50).WithMessage("Please enter a valid street name");
         RuleFor(x => x.District).NotEmpty().Length(2, 50).WithMessage("Please enter a valid district name");
         RuleFor(x => x.City).NotEmpty().Length(2, 50).WithMessage("Please enter a valid city name");

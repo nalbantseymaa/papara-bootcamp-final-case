@@ -2,14 +2,14 @@ using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExpenseTracking.Api.Controllers;
 
-//ROLE=ADMIN 
 [ApiController]
-[Route("api/[controller]")]
-
+[Route("api/phones")]
+[Authorize(Roles = "Manager")]
 public class PhonesController : ControllerBase
 {
     private readonly IMediator mediator;
@@ -18,7 +18,7 @@ public class PhonesController : ControllerBase
         this.mediator = mediator;
     }
 
-    [HttpGet("GetAll")]
+    [HttpGet]
     public async Task<ApiResponse<List<PhoneResponse>>> GetAll()
     {
         var operation = new GetAllPhonesQuery();
@@ -26,7 +26,7 @@ public class PhonesController : ControllerBase
         return result;
     }
 
-    [HttpGet("GetById/{id}")]
+    [HttpGet("{id}")]
     public async Task<ApiResponse<PhoneResponse>> GetByIdAsync([FromRoute] int id)
     {
         var operation = new GetPhonesByIdQuery(id);
@@ -34,25 +34,26 @@ public class PhonesController : ControllerBase
         return result;
     }
 
-    [HttpPost("employee/{employeeId}")]
-    public async Task<ApiResponse<PhoneResponse>> PostForEmployee(int EmployeeId, [FromBody] PhoneRequest Phone)
+    [HttpPost("~/api/employees/{employeeId}/phones")]
+    public async Task<ApiResponse> PostForEmployee(long employeeId, [FromBody] PhoneRequest Phone)
     {
-        var operation = new CreatePhoneForEmployeeCommand(EmployeeId, Phone);
+        var operation = new CreatePhoneForEmployeeCommand(employeeId, Phone);
         var result = await mediator.Send(operation);
         return result;
     }
 
-    [HttpPost("department/{departmentId}")]
-    public async Task<ApiResponse<PhoneResponse>> PostForDepartment(int DepartmentId, [FromBody] PhoneRequest Phones)
+    [HttpPost("~/api/departments/{departmentId}/phones")]
+    public async Task<ApiResponse> PostForDepartment(long departmentId, [FromBody] PhoneRequest Phones)
     {
-        var operation = new CreatePhoneForDepartmentCommand(DepartmentId, Phones);
+        var operation = new CreatePhoneForDepartmentCommand(departmentId, Phones);
         var result = await mediator.Send(operation);
         return result;
     }
-    [HttpPost("manager/{managerId}")]
-    public async Task<ApiResponse<PhoneResponse>> PostForManager(int ManagerId, [FromBody] PhoneRequest Phones)
+
+    [HttpPost("~/api/managers/{managerId}/phones")]
+    public async Task<ApiResponse> PostForManager(long managerId, [FromBody] PhoneRequest Phones)
     {
-        var operation = new CreatePhoneForManagerCommand(ManagerId, Phones);
+        var operation = new CreatePhoneForManagerCommand(managerId, Phones);
         var result = await mediator.Send(operation);
         return result;
     }

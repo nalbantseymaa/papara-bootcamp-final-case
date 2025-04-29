@@ -2,13 +2,14 @@ using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExpenseTracking.Api.Controllers;
 
-//ROLE=ADMIN 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/addresses")]
+[Authorize(Roles = "Manager")]
 public class AdressesController : ControllerBase
 {
     private readonly IMediator mediator;
@@ -17,7 +18,7 @@ public class AdressesController : ControllerBase
         this.mediator = mediator;
     }
 
-    [HttpGet("GetAll")]
+    [HttpGet]
     public async Task<ApiResponse<List<AddressResponse>>> GetAll()
     {
         var operation = new GetAllAdressesQuery();
@@ -25,7 +26,7 @@ public class AdressesController : ControllerBase
         return result;
     }
 
-    [HttpGet("GetById/{id}")]
+    [HttpGet("{id}")]
     public async Task<ApiResponse<AddressResponse>> GetByIdAsync([FromRoute] int id)
     {
         var operation = new GetAdressesByIdQuery(id);
@@ -33,18 +34,26 @@ public class AdressesController : ControllerBase
         return result;
     }
 
-    [HttpPost("employee/{employeeId}")]
-    public async Task<ApiResponse<AddressResponse>> PostForEmployee(int EmployeeId, [FromBody] AddressRequest Address)
+    [HttpGet("ByParameters")]
+    public async Task<ApiResponse<List<AddressResponse>>> GetByParameters([FromQuery] string? city, [FromQuery] string? zipCode, [FromQuery] bool? ısDefault)
     {
-        var operation = new CreateAddressForEmployeeCommand(EmployeeId, Address);
+        var operation = new GetAdressesByParametersQuery(city, zipCode, ısDefault);
         var result = await mediator.Send(operation);
         return result;
     }
 
-    [HttpPost("department/{departmentId}")]
-    public async Task<ApiResponse<AddressResponse>> PostForDepartment(int DepartmentId, [FromBody] AddressRequest Adresses)
+    [HttpPost("~/api/employees/{employeeId}/addresses")]
+    public async Task<ApiResponse> PostForEmployee([FromRoute] long employeeId, [FromBody] AddressRequest Address)
     {
-        var operation = new CreateAddressForDepartmentCommand(DepartmentId, Adresses);
+        var operation = new CreateAddressForEmployeeCommand(employeeId, Address);
+        var result = await mediator.Send(operation);
+        return result;
+    }
+
+    [HttpPost("~/api/departments/{departmentId}/addresses")]
+    public async Task<ApiResponse> PostForDepartment([FromRoute] long departmentId, [FromBody] AddressRequest Adresses)
+    {
+        var operation = new CreateAddressForDepartmentCommand(departmentId, Adresses);
         var result = await mediator.Send(operation);
         return result;
     }
