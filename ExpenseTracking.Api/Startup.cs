@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using System.Text.Json.Serialization;
 using AutoMapper;
 using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Impl.Cqrs;
@@ -8,6 +9,7 @@ using ExpenseTracking.Api.Impl.Validation;
 using ExpenseTracking.Api.Mapper;
 using ExpenseTracking.Base;
 using FluentValidation.AspNetCore;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -31,12 +33,17 @@ public class Startup
         JwtConfig = Configuration.GetSection("JwtConfig").Get<JwtConfig>();
 
         services.AddSingleton<JwtConfig>(JwtConfig);
+        services.AddControllers()
+           .AddJsonOptions(opts =>
+           {
+               opts.JsonSerializerOptions.Converters
+                   .Add(new JsonStringEnumConverter());
+           })
+           .AddFluentValidation(x =>
+           {
+               x.RegisterValidatorsFromAssemblyContaining<EmployeeValidator>();
+           });
 
-        services.AddControllers();
-        services.AddControllers().AddFluentValidation(x =>
-     {
-         x.RegisterValidatorsFromAssemblyContaining<EmployeeValidator>();
-     });
         services.AddSingleton(new MapperConfiguration(x => x.AddProfile(new MapperConfig())).CreateMapper());
 
         services.AddDbContext<AppDbContext>(options =>
@@ -45,6 +52,8 @@ public class Startup
         services.AddMediatR(x => x.RegisterServicesFromAssemblies(typeof(CreateEmployeeCommand).GetTypeInfo().Assembly));
 
         services.AddScoped<ITokenService, TokenService>();
+
+
 
         services.AddAuthentication(x =>
    {
