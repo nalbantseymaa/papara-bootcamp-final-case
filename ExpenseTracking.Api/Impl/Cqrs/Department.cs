@@ -5,7 +5,7 @@ using MediatR;
 namespace ExpenseTracking.Api.Impl.Cqrs;
 
 public record GetAllDepartmentsQuery : IRequest<ApiResponse<List<DepartmentResponse>>>;
-public record GetDepartmentByIdQuery(int Id) : IRequest<ApiResponse<DepartmentResponse>>;
+public record GetDepartmentByIdQuery(int Id) : IRequest<ApiResponse<DepartmentDetailResponse>>;
 public record CreateDepartmentCommand(DepartmentRequest Department) : IRequest<ApiResponse<DepartmentResponse>>;
 public record UpdateDepartmentCommand(int Id, DepartmentRequest Department) : IRequest<ApiResponse>;
 public record DeleteDepartmentCommand(int Id) : IRequest<ApiResponse>;

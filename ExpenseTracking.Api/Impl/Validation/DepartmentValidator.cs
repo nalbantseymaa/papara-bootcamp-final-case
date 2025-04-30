@@ -11,16 +11,15 @@ public class DepartmentRequestValidator : AbstractValidator<DepartmentRequest>
             .NotEmpty().WithMessage("Department name is required")
             .MinimumLength(2).WithMessage("Department name must be at least 2 characters")
             .MaximumLength(100).WithMessage("Department name cannot exceed 100 characters")
-            .Matches(@"^[a-zA-Z0-9\s]*$").WithMessage("Department name can only contain letters, numbers and spaces");
+            .Matches(@"^[a-zA-Z0-9\s]*$").WithMessage("Department name can only contain letters, numbers and   spaces");
 
         RuleFor(x => x.Description)
             .MaximumLength(500).WithMessage("Description cannot exceed 500 characters")
             .When(x => !string.IsNullOrEmpty(x.Description));
 
         RuleFor(x => x.ManagerId)
-        .GreaterThan(0)
-        .When(x => x.ManagerId.HasValue)
-        .WithMessage("Manager ID must be greater than 0 ");
-
+           .GreaterThan(0)
+           .When(x => x.ManagerId.HasValue)
+           .WithMessage("Manager ID must be greater than 0 if provided.");
     }
 }

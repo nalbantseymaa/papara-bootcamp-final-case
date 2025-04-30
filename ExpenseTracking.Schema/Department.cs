@@ -10,7 +10,7 @@ public class DepartmentRequest
 
 }
 
-public class DepartmentResponse : BaseResponse
+public class DepartmentDetailResponse : BaseResponse
 {
     public string Name { get; set; }
     public string? Description { get; set; }
@@ -20,4 +20,12 @@ public class DepartmentResponse : BaseResponse
     public List<PhoneResponse> Phones { get; set; }
     public List<AddressResponse> Addresses { get; set; }
 
+}
+
+public class DepartmentResponse : BaseResponse
+{
+    public string Name { get; set; }
+    public string? Description { get; set; }
+    public long? ManagerId { get; set; }
+    public string ManagerName { get; set; }
 }

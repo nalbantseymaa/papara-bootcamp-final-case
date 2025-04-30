@@ -2,14 +2,14 @@ using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExpenseTracking.Api.Controllers;
 
-//ROLE=ADMIN 
 [ApiController]
-[Route("api/[controller]")]
-
+[Route("api/employees")]
+[Authorize(Roles = "Manager")]
 public class EmployeesController : ControllerBase
 {
     private readonly IMediator mediator;
@@ -18,7 +18,7 @@ public class EmployeesController : ControllerBase
         this.mediator = mediator;
     }
 
-    [HttpGet("GetAll")]
+    [HttpGet]
     public async Task<ApiResponse<List<EmployeeResponse>>> GetAll()
     {
         var operation = new GetAllEmployeesQuery();
@@ -26,18 +26,27 @@ public class EmployeesController : ControllerBase
         return result;
     }
 
-    [HttpGet("GetById/{id}")]
-    public async Task<ApiResponse<EmployeeResponse>> GetByIdAsync([FromRoute] int id)
+    [HttpGet("{id}")]
+    public async Task<ApiResponse<EmployeeDetailResponse>> GetByIdAsync([FromRoute] int id)
     {
         var operation = new GetEmployeeByIdQuery(id);
         var result = await mediator.Send(operation);
         return result;
     }
 
-    [HttpPost]
-    public async Task<ApiResponse<EmployeeResponse>> Post([FromBody] EmployeeRequest Employee)
+    [HttpGet("ByParameters")]
+    public async Task<ApiResponse<List<EmployeeResponse>>> GetByParameters([FromQuery] long? departmentId, [FromQuery] int? minSalary, [FromQuery] int? MaxSalary)
     {
-        var operation = new CreateEmployeeCommand(Employee);
+        var operation = new GetEmployeesByParametersQuery(departmentId, minSalary, MaxSalary);
+        var result = await mediator.Send(operation);
+        return result;
+    }
+
+    [HttpPost]
+    public async Task<ApiResponse<CreateEmployeeResponse>> Post([FromBody] CreateEmployeeRequest request)
+    {
+        var operation = new CreateEmployeeCommand(request.User, request.Employee);
+
         var result = await mediator.Send(operation);
         return result;
     }

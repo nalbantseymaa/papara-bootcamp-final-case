@@ -8,12 +8,7 @@ public class CreateManagerRequestValidator
         IValidator<UserRequest> userValidator,
         IValidator<ManagerRequest> mngValidator)
     {
-        RuleFor(x => x.User)
-            .NotNull()
-            .SetValidator(userValidator);
-
-        RuleFor(x => x.Manager)
-            .NotNull()
-            .SetValidator(mngValidator);
+        RuleFor(x => x.User).NotNull().SetValidator(userValidator);
+        RuleFor(x => x.Manager).NotNull().SetValidator(mngValidator);
     }
 }

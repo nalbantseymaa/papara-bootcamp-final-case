@@ -1,4 +1,3 @@
-using ExpenseTracking.Base;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -14,15 +13,11 @@ public class Employee : User
     public string IdentityNumber { get; set; }
     public DateTime DateOfBirth { get; set; }
     public decimal Salary { get; set; }
-
     public int EmployeeNumber { get; set; }
     public DateTime HireDate { get; set; }
     public DateTime? ExitDate { get; set; }
-
     public Department Department { get; set; }
     public ICollection<Department> ManagedDepartments { get; set; }
-    public virtual ICollection<Address> Addresses { get; set; }
-    public virtual ICollection<Phone> Phones { get; set; }
     public virtual ICollection<Expense> Expenses { get; set; }
 }
 

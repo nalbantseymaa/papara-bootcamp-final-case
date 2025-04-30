@@ -10,7 +10,7 @@ namespace ExpenseTracking.Api.Impl.Query;
 
 public class ExpenseCategoryQueryHandler :
 IRequestHandler<GetAllCategoriesQuery, ApiResponse<List<CategoryResponse>>>,
-IRequestHandler<GetCategoryByIdQuery, ApiResponse<CategoryResponse>>
+IRequestHandler<GetCategoryByIdQuery, ApiResponse<CategoryDetailResponse>>
 {
     private readonly AppDbContext dbcontext;
     private readonly IMapper mapper;
@@ -31,7 +31,7 @@ IRequestHandler<GetCategoryByIdQuery, ApiResponse<CategoryResponse>>
         return new ApiResponse<List<CategoryResponse>>(mapped);
     }
 
-    public async Task<ApiResponse<CategoryResponse>> Handle(GetCategoryByIdQuery request, CancellationToken cancellationToken)
+    public async Task<ApiResponse<CategoryDetailResponse>> Handle(GetCategoryByIdQuery request, CancellationToken cancellationToken)
     {
         var ExpenseCategory = await dbcontext.ExpenseCategories
             .Include(x => x.Expenses)
@@ -39,10 +39,10 @@ IRequestHandler<GetCategoryByIdQuery, ApiResponse<CategoryResponse>>
 
         if (ExpenseCategory == null)
         {
-            return new ApiResponse<CategoryResponse>("ExpenseCategory not found");
+            return new ApiResponse<CategoryDetailResponse>("ExpenseCategory not found");
         }
 
-        var mapped = mapper.Map<CategoryResponse>(ExpenseCategory);
-        return new ApiResponse<CategoryResponse>(mapped);
+        var mapped = mapper.Map<CategoryDetailResponse>(ExpenseCategory);
+        return new ApiResponse<CategoryDetailResponse>(mapped);
     }
 }

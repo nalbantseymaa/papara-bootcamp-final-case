@@ -2,14 +2,14 @@ using ExpenseTracking.Api.Impl.Cqrs.Category;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExpenseTracking.Api.Controllers;
 
-//ROLE=ADMIN 
 [ApiController]
-[Route("api/[controller]")]
-
+[Route("api/categories")]
+[Authorize(Roles = "Manager")]
 public class ExpenseCategoriesController : ControllerBase
 {
     private readonly IMediator mediator;
@@ -18,7 +18,7 @@ public class ExpenseCategoriesController : ControllerBase
         this.mediator = mediator;
     }
 
-    [HttpGet("GetAll")]
+    [HttpGet]
     public async Task<ApiResponse<List<CategoryResponse>>> GetAll()
     {
         var operation = new GetAllCategoriesQuery();
@@ -26,8 +26,8 @@ public class ExpenseCategoriesController : ControllerBase
         return result;
     }
 
-    [HttpGet("GetById/{id}")]
-    public async Task<ApiResponse<CategoryResponse>> GetByIdAsync([FromRoute] int id)
+    [HttpGet("{id}")]
+    public async Task<ApiResponse<CategoryDetailResponse>> GetByIdAsync([FromRoute] int id)
     {
         var operation = new GetCategoryByIdQuery(id);
         var result = await mediator.Send(operation);

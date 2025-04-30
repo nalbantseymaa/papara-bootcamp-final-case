@@ -9,7 +9,6 @@ public class Department : BaseEntity
     public string Name { get; set; }
     public string? Description { get; set; }
     public long? ManagerId { get; set; }
-
     public virtual Employee Manager { get; set; }
     public virtual ICollection<Phone> Phones { get; set; }
     public virtual ICollection<Address> Addresses { get; set; }
