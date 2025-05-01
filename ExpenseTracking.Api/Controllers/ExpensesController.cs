@@ -1,5 +1,6 @@
 using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Base;
+using ExpenseTracking.Base.Enum;
 using ExpenseTracking.Schema;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -8,8 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ExpenseTracking.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
-
+[Route("api/expenses")]
 public class ExpenseController : ControllerBase
 {
     private readonly IMediator mediator;
@@ -18,7 +18,7 @@ public class ExpenseController : ControllerBase
         this.mediator = mediator;
     }
 
-    [HttpGet("GetAll")]
+    [HttpGet]
     [Authorize(Roles = "Manager,Employee")]
     public async Task<ApiResponse<List<ExpenseResponse>>> GetAll()
     {
@@ -27,11 +27,22 @@ public class ExpenseController : ControllerBase
         return result;
     }
 
-    [HttpGet("GetById/{id}")]
+    [HttpGet("{id}")]
     [Authorize(Roles = "Manager,Employee")]
     public async Task<ApiResponse<ExpenseResponse>> GetByIdAsync([FromRoute] int id)
     {
         var operation = new GetExpenseByIdQuery(id);
+        var result = await mediator.Send(operation);
+        return result;
+    }
+
+    [HttpGet("ByParameters")]
+    [Authorize(Roles = "Manager,Employee")]
+    public async Task<ApiResponse<List<ExpenseResponse>>> GetByParameters([FromQuery] long? categoryId,
+    [FromQuery] long? paymentMethodId, [FromQuery] decimal? minAmount, [FromQuery] decimal? maxAmount,
+    [FromQuery] ExpenseStatus? status, [FromQuery] bool? isPaid, [FromQuery] string? location)
+    {
+        var operation = new GetExpensesByParametersQuery(categoryId, paymentMethodId, minAmount, maxAmount, status, isPaid, location);
         var result = await mediator.Send(operation);
         return result;
     }
@@ -62,7 +73,6 @@ public class ExpenseController : ControllerBase
         var result = await mediator.Send(operation);
         return result;
     }
-
 
     [HttpPut("reject/{expenseId}")]
     [Authorize(Roles = "Manager")]

@@ -1,6 +1,6 @@
 using ExpenseTracking.Api.Domain;
-using ExpenseTracking.Api.Enum;
 using ExpenseTracking.Base;
+using ExpenseTracking.Base.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -23,6 +23,7 @@ public class Expense : BaseEntity
     public virtual PaymentMethod PaymentMethod { get; set; }
     public virtual ICollection<ExpenseFile> File { get; set; }
 }
+
 public class ExpenseConfiguration : IEntityTypeConfiguration<Expense>
 {
     public void Configure(EntityTypeBuilder<Expense> builder)

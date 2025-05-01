@@ -12,7 +12,7 @@ public static class JwtManager
         var claims = identity.Claims;
         session.UserName = GetClaimValue(claims, "UserName");
         session.UserId = GetClaimValue(claims, "UserId");
-        session.UserRole = GetClaimValue(claims, "Role");
+        session.UserRole = GetClaimValue(claims, ClaimTypes.Role);
         session.FirstName = GetClaimValue(claims, "FirstName");
         session.LastName = GetClaimValue(claims, "LastName");
         session.Token = context.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");

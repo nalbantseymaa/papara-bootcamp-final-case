@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace ExpenseTracking.Api.Validators
 {
-    public static class RuleBuilderExtensions
+    public static class EmailExtensions
     {
         private const string EMAIL_PATTERN =
             @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$";

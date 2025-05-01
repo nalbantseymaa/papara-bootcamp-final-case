@@ -23,9 +23,20 @@ public class MapperConfig : Profile
   private void ConfigureEmployeeMappings()
   {
     CreateMap<EmployeeRequest, Employee>();
+    CreateMap<Employee, EmployeeDetailResponse>();
     CreateMap<Employee, EmployeeResponse>()
-      .ForMember(dest => dest.EmployeeName, opt => opt.MapFrom(src =>
-        $"{src.FirstName} {(string.IsNullOrWhiteSpace(src.MiddleName) ? "" : src.MiddleName + " ")}{src.LastName}"));
+        .ForMember(dest => dest.EmployeeName, opt => opt.MapFrom(src =>
+        $"{src.FirstName} {(string.IsNullOrWhiteSpace(src.MiddleName) ? "" : src.MiddleName + " ")}{src.LastName}"))
+        .ForMember(dest => dest.ManagedDepartments,
+                   opt => opt.MapFrom(src =>
+                       src.ManagedDepartments
+                          .Select(d => new ManagedDepartmentDto
+                          {
+                            Id = d.Id,
+                            Name = d.Name
+                          })
+                          .ToList()
+                   ));
   }
 
   private void ConfigureManagerMappings()
@@ -61,7 +72,11 @@ public class MapperConfig : Profile
   private void ConfigureDepartmentMappings()
   {
     CreateMap<DepartmentRequest, Department>();
-    CreateMap<Department, DepartmentResponse>();
+    CreateMap<Department, DepartmentResponse>()
+      .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src =>
+        $"{src.Manager.FirstName} {(string.IsNullOrWhiteSpace(src.Manager.MiddleName) ? "" : src.Manager.MiddleName + " ")}{src.Manager.LastName}"));
+    CreateMap<Department, DepartmentDetailResponse>();
+
   }
 
   private void ConfigurePhoneMappings()
@@ -98,6 +113,10 @@ public class MapperConfig : Profile
     CreateMap<ExpenseFileRequest, ExpenseFile>()
       .ForMember(dest => dest.FileName, opt => opt.MapFrom(src => src.File.FileName))
       .ForMember(dest => dest.FileSize, opt => opt.MapFrom(src => src.File.Length));
-    CreateMap<ExpenseFile, ExpenseFileResponse>();
+    CreateMap<ExpenseFile, ExpenseFileResponse>()
+      .ForMember(dest => dest.ExpenseId, opt => opt.MapFrom(src => src.ExpenseId));
+
+
+
   }
 }

@@ -2,11 +2,10 @@ using AutoMapper;
 using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Base;
+using ExpenseTracking.Base.Enum;
 using ExpenseTracking.Schema;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using ExpenseTracking.Api.Enum;
-
 
 namespace ExpenseTracking.Api.Impl.Command;
 
@@ -19,151 +18,163 @@ public class ExpenseCommandHandler :
 {
     private readonly AppDbContext dbContext;
     private readonly IMapper mapper;
+    private readonly IAppSession appSession;
 
-    public ExpenseCommandHandler(AppDbContext dbContext, IMapper mapper)
+    public ExpenseCommandHandler(AppDbContext dbContext, IMapper mapper, IAppSession appSession)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
+        this.appSession = appSession;
     }
+
     public async Task<ApiResponse<ExpenseResponse>> Handle(CreateExpenseCommand request, CancellationToken cancellationToken)
     {
+        var categoryCheck = await ValidateEntity(dbContext.ExpenseCategories, request.Expense.CategoryId, "Category", cancellationToken);
+        if (!categoryCheck.isValid) return new ApiResponse<ExpenseResponse>(categoryCheck.errorMessage!);
+
+        var paymentCheck = await ValidateEntity(dbContext.PaymentMethods, request.Expense.PaymentMethodId, "Payment Method", cancellationToken);
+        if (!paymentCheck.isValid) return new ApiResponse<ExpenseResponse>(paymentCheck.errorMessage!);
+
+        var expenseEntity = mapper.Map<Expense>(request.Expense);
+        var duplicateCheckResult = await CheckIfExpenseDuplicate(expenseEntity, cancellationToken);
+        if (!duplicateCheckResult.Success)
+            return new ApiResponse<ExpenseResponse>(duplicateCheckResult.Message);
+
         var mapped = mapper.Map<Expense>(request.Expense);
+        mapped.EmployeeId = Convert.ToInt64(appSession.UserId);
 
         var entity = await dbContext.AddAsync(mapped, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var response = mapper.Map<ExpenseResponse>(entity.Entity);
+        var createdExpense = await dbContext.Expenses.Include(e => e.Employee)
+           .FirstOrDefaultAsync(e => e.Id == entity.Entity.Id, cancellationToken);
+
+        var response = mapper.Map<ExpenseResponse>(createdExpense);
         return new ApiResponse<ExpenseResponse>(response);
     }
 
     public async Task<ApiResponse> Handle(ApproveExpenseCommand request, CancellationToken cancellationToken)
     {
-        var expense = await dbContext.Expenses
-            .Include(x => x.Employee)
-            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+        var expenseCheck = await ValidateEntity(dbContext.Expenses, request.Id, "Expense", cancellationToken);
+        if (!expenseCheck.isValid) return new ApiResponse(expenseCheck.errorMessage!);
 
-        if (expense == null)
-            return new ApiResponse("Expense not found");
-
-        if (!expense.IsActive)
-            return new ApiResponse("Expense is not active");
+        var expense = expenseCheck.entity!;
 
         if (expense.Status != ExpenseStatus.Pending)
-            return new ApiResponse("Only pending expenses can be approved");
+            return new ApiResponse($"Cannot approve expense in {expense.Status} status. Only pending expenses can be approved.");
 
         expense.Status = ExpenseStatus.Approved;
-        expense.UpdatedDate = DateTime.UtcNow;
         expense.ApprovedDate = DateTime.UtcNow;
+        expense.IsActive = false; // Onaylandıktan sonra harcama pasif hale getiriliyor
+        //ödeme servisine yönlendirilir
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return new ApiResponse("Expense approved successfully");
+        return new ApiResponse(true, "Expense approved successfully");
     }
 
     public async Task<ApiResponse> Handle(RejectExpenseCommand request, CancellationToken cancellationToken)
     {
-        var expense = await dbContext.Expenses
-            .Include(x => x.Employee)
-            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+        var expenseCheck = await ValidateEntity(dbContext.Expenses, request.Id, "Expense", cancellationToken);
+        if (!expenseCheck.isValid) return new ApiResponse(expenseCheck.errorMessage!);
 
-        if (expense == null)
-            return new ApiResponse("Expense not found");
-
-        if (!expense.IsActive)
-            return new ApiResponse("Expense is not active");
+        var expense = expenseCheck.entity!;
 
         if (expense.Status != ExpenseStatus.Pending)
             return new ApiResponse($"Cannot reject expense in {expense.Status} status. Only pending expenses can be rejected.");
 
         if (string.IsNullOrWhiteSpace(request.RejectExpense.RejectionReason))
-            return new ApiResponse("Rejection reason is required");
+            return new ApiResponse(false, "Rejection reason is required");
 
         expense.Status = ExpenseStatus.Rejected;
         expense.RejectionReason = request.RejectExpense.RejectionReason;
-        expense.UpdatedDate = DateTime.UtcNow;
+        expense.IsActive = false;
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        return new ApiResponse("Expense rejected successfully");
-
+        return new ApiResponse(true, "Expense rejected successfully");
     }
 
     public async Task<ApiResponse> Handle(UpdateExpenseCommand request, CancellationToken cancellationToken)
     {
-        var expense = await dbContext.Expenses
-            .Include(x => x.Category)
-            .Include(x => x.PaymentMethod)
-            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+        var expenseCheck = await ValidateEntity(dbContext.Expenses, request.Id, "Expense", cancellationToken);
+        if (!expenseCheck.isValid) return new ApiResponse(expenseCheck.errorMessage!);
 
-        if (expense == null)
-            return new ApiResponse("Expense not found");
-
-        if (!expense.IsActive)
-            return new ApiResponse("Expense is not active");
-
+        var expense = expenseCheck.entity!;
         if (expense.Status != ExpenseStatus.Pending)
-            return new ApiResponse("Only pending expenses can be updated");
+            return new ApiResponse($"Expense is already processed and cannot be updated. Current status: {expense.Status}");
 
-        if (request.Expense.CategoryId > 0)
-        {
-            var categoryExists = await dbContext.ExpenseCategories
-                .AnyAsync(x => x.Id == request.Expense.CategoryId && x.IsActive, cancellationToken);
-            if (!categoryExists)
-                return new ApiResponse("Invalid category");
-            expense.CategoryId = request.Expense.CategoryId;
-        }
+        var categoryCheck = await ValidateEntity(dbContext.ExpenseCategories, request.Expense.CategoryId, "Category", cancellationToken);
+        if (!categoryCheck.isValid) return new ApiResponse(categoryCheck.errorMessage!);
 
-        if (request.Expense.PaymentMethodId > 0)
-        {
-            var paymentMethodExists = await dbContext.PaymentMethods
-                .AnyAsync(x => x.Id == request.Expense.PaymentMethodId && x.IsActive, cancellationToken);
-            if (!paymentMethodExists)
-                return new ApiResponse("Invalid payment method");
-            expense.PaymentMethodId = request.Expense.PaymentMethodId;
-        }
+        var paymentCheck = await ValidateEntity(dbContext.PaymentMethods, request.Expense.PaymentMethodId, "Payment Method", cancellationToken);
+        if (!paymentCheck.isValid) return new ApiResponse(paymentCheck.errorMessage!);
 
         var e = request.Expense;
+        expense.CategoryId = e.CategoryId > 0 ? e.CategoryId : expense.CategoryId;
+        expense.PaymentMethodId = e.PaymentMethodId > 0 ? e.PaymentMethodId : expense.PaymentMethodId;
+        expense.Amount = e.Amount > 0 ? e.Amount : expense.Amount;
+        expense.Description = e.Description ?? expense.Description;
+        expense.Location = !string.IsNullOrWhiteSpace(e.Location) ? e.Location : expense.Location;
+        expense.ExpenseDate = (e.ExpenseDate != default && e.ExpenseDate <= DateTime.Today) ? e.ExpenseDate : expense.ExpenseDate;
 
-        expense.Amount = e.Amount > 0
-                              ? e.Amount
-                              : expense.Amount;
-
-        expense.Description = e.Description
-                              ?? expense.Description;
-
-        expense.Location = !string.IsNullOrWhiteSpace(e.Location)
-                              ? e.Location
-                              : expense.Location;
-
-        expense.ExpenseDate = (e.ExpenseDate != default && e.ExpenseDate <= DateTime.Today)
-                              ? e.ExpenseDate
-                              : expense.ExpenseDate;
-
-
-        expense.UpdatedDate = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
-
-        return new ApiResponse("Expense updated successfully");
-
+        return new ApiResponse(true, "Expense updated successfully");
     }
 
     public async Task<ApiResponse> Handle(DeleteExpenseCommand request, CancellationToken cancellationToken)
     {
-        var entity = await dbContext.ExpenseCategories.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+        var expenseCheck = await ValidateEntity(dbContext.Expenses, request.Id, "Expense", cancellationToken);
+        if (!expenseCheck.isValid) return new ApiResponse(expenseCheck.errorMessage!);
 
-        if (entity == null)
-            return new ApiResponse("Expense not found");
+        var expense = expenseCheck.entity!;
+        if (expense.Status == ExpenseStatus.Pending)
+            return new ApiResponse(false, $"Cannot delete expense in {expense.Status} status. Only approved and rejected expenses can be deleted.");
 
-        if (!entity.IsActive)
-            return new ApiResponse("Expense is not active");
+        expense.IsActive = false;
 
-        if (entity.Expenses.Any())
-            return new ApiResponse("Expense cannot be deleted because it has expenses associated with it");
+        var expenseFiles = await dbContext.ExpenseFiles
+        .Where(f => f.ExpenseId == expense.Id && f.IsActive)
+        .ToListAsync(cancellationToken);
 
-        entity.IsActive = false;
+        foreach (var file in expenseFiles)
+        {
+            file.IsActive = false;
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        return new ApiResponse();
+        return new ApiResponse(true, "Expense deleted successfully");
     }
 
+    private async Task<(bool isValid, string? errorMessage, T? entity)> ValidateEntity<T>(
+    DbSet<T> dbSet, long id, string entityName, CancellationToken token) where T : class
+    {
+        var entity = await dbSet.FindAsync(new object[] { id }, token);
+        if (entity == null)
+            return (false, $"{entityName} not found", null);
 
+        if (!((BaseEntity)(object)entity).IsActive)
+            return (false, $"{entityName} is inactive", null);
+
+        return (true, null, entity);
+    }
+
+    public async Task<ApiResponse> CheckIfExpenseDuplicate(Expense expense, CancellationToken cancellationToken)
+    {
+        bool isDuplicate = await dbContext.Expenses
+            .AnyAsync(e =>
+                e.EmployeeId == Convert.ToInt64(appSession.UserId) &&
+                e.CategoryId == expense.CategoryId &&
+                e.PaymentMethodId == expense.PaymentMethodId &&
+                e.Location == expense.Location &&
+                e.Amount == expense.Amount &&
+                e.ExpenseDate.Date == expense.ExpenseDate.Date &&
+                e.Description == expense.Description,
+                cancellationToken);
+
+        if (isDuplicate)
+        {
+            return new ApiResponse(false, "A similar expense already exists. Duplicate entries are not allowed.");
+        }
+        return new ApiResponse();
+    }
 }

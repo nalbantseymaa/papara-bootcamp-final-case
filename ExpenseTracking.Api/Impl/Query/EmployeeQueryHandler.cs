@@ -1,8 +1,10 @@
 using AutoMapper;
 using ExpenseTracking.Api.Context;
+using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
+using LinqKit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -50,22 +52,22 @@ IRequestHandler<GetEmployeesByParametersQuery, ApiResponse<List<EmployeeResponse
 
     public async Task<ApiResponse<List<EmployeeResponse>>> Handle(GetEmployeesByParametersQuery request, CancellationToken cancellationToken)
     {
-        var query = dbcontext.Employees.AsQueryable();
+        var predicate = PredicateBuilder.New<Employee>(e => e.IsActive);
 
         if (request.DepartmentId.HasValue)
-            query = query.Where(e => e.DepartmentId == request.DepartmentId.Value);
+            predicate = predicate.And(e => e.DepartmentId == request.DepartmentId);
 
         if (request.MinSalary.HasValue)
-            query = query.Where(e => e.Salary >= request.MinSalary.Value);
+            predicate = predicate.And(e => e.Salary >= request.MinSalary);
 
         if (request.MaxSalary.HasValue)
-            query = query.Where(e => e.Salary <= request.MaxSalary.Value);
+            predicate = predicate.And(e => e.Salary <= request.MaxSalary);
 
-        var data = await query
-              .Where(x => x.IsActive)
-              .ToListAsync(cancellationToken);
+        var employees = await dbcontext.Employees.Where(predicate)
+            .ToListAsync(cancellationToken);
 
-        var mapped = mapper.Map<List<EmployeeResponse>>(data);
+        var mapped = mapper.Map<List<EmployeeResponse>>(employees);
         return new ApiResponse<List<EmployeeResponse>>(mapped);
     }
+
 }

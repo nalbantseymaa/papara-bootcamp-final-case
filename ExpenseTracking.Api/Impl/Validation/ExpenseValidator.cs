@@ -7,10 +7,6 @@ public class ExpenseRequestValidator : AbstractValidator<ExpenseRequest>
 {
     public ExpenseRequestValidator()
     {
-        RuleFor(x => x.EmployeeId)
-            .NotEmpty().WithMessage("Employee ID is required")
-            .GreaterThan(0).WithMessage("Employee ID must be greater than 0");
-
         RuleFor(x => x.CategoryId)
             .NotEmpty().WithMessage("Category ID is required")
             .GreaterThan(0).WithMessage("Category ID must be greater than 0");

@@ -1,5 +1,5 @@
-using ExpenseTracking.Api.Enum;
 using ExpenseTracking.Base;
+using ExpenseTracking.Base.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,10 +11,10 @@ public class ExpenseFile : BaseEntity
     public FileType FileType { get; set; }
     public byte[] FileData { get; set; }
     public long FileSize { get; set; }
-
     public virtual Expense Expense { get; set; }
 
 }
+
 public class ExpenseFileConfiguration : IEntityTypeConfiguration<ExpenseFile>
 {
     public void Configure(EntityTypeBuilder<ExpenseFile> builder)
