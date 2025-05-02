@@ -145,6 +145,18 @@ public class ExpenseCommandHandler :
         return new ApiResponse(true, "Expense deleted successfully");
     }
 
+    /// <summary>
+    /// Validates the existence and active status of an entity in the database.
+    /// </summary>
+    /// <typeparam name="T">The type of the entity being validated.</typeparam>
+    /// <param name="dbSet">The DbSet representing the collection of entities.</param>
+    /// <param name="id">The unique identifier of the entity to validate.</param>
+    /// <param name="entityName">The name of the entity type, used in error messages.</param>
+    /// <param name="token">The cancellation token to observe while awaiting the task.</param>
+    /// <returns>
+    /// A tuple containing a boolean indicating validity, an optional error message, 
+    /// and the entity if found and active.
+    /// </returns>
     private async Task<(bool isValid, string? errorMessage, T? entity)> ValidateEntity<T>(
     DbSet<T> dbSet, long id, string entityName, CancellationToken token) where T : class
     {

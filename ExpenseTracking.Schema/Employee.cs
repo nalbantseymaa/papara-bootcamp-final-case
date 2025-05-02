@@ -8,7 +8,6 @@ public class EmployeeRequest
     public string FirstName { get; set; }
     public string? MiddleName { get; set; }
     public string LastName { get; set; }
-    public string Email { get; set; }
     public string IdentityNumber { get; set; }
     public DateTime DateOfBirth { get; set; }
     public decimal Salary { get; set; }
@@ -53,7 +52,6 @@ public class ManagedDepartmentDto
 
 public class UpdateEmployeeRequest
 {
-    public string Email { get; set; }
     public long DepartmentId { get; set; }
     public decimal Salary { get; set; }
 }

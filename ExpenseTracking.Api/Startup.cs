@@ -53,7 +53,9 @@ public class Startup
 
         services.AddScoped<ITokenService, TokenService>();
 
+        services.AddScoped<IAppSession, AppSession>();
 
+        services.AddScoped<IUserService, UserService>();
 
         services.AddAuthentication(x =>
    {

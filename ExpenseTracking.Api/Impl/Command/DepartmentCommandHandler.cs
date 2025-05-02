@@ -100,10 +100,11 @@ public class DepartmentCommandHandler :
             return new ApiResponse(true, string.Empty);
 
         var manager = await dbContext.Employees
-      .FirstOrDefaultAsync(e => e.Id == managerId.Value, cancellationToken);
+       .FirstOrDefaultAsync(e => e.Id == managerId.Value, cancellationToken);
 
         if (manager == null)
             return new ApiResponse(false, "Manager not found");
+
         if (!manager.IsActive)
             return new ApiResponse(false, "Manager is inactive");
 

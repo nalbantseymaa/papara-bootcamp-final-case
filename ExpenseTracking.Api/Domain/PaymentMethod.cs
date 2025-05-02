@@ -7,8 +7,8 @@ public class PaymentMethod : BaseEntity
 {
     public string Name { get; set; }
     public string? Description { get; set; }
-
     public virtual ICollection<Expense> Expenses { get; set; }
+
 }
 
 public class PaymentMethodConfiguration : IEntityTypeConfiguration<PaymentMethod>

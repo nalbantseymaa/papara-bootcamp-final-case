@@ -16,6 +16,5 @@ public class EmployeeValidator : AbstractValidator<EmployeeRequest>
         RuleFor(x => x.IdentityNumber).NotEmpty().WithMessage("Identity number is required.").Matches(@"^\d{11}$").WithMessage("Identity number must be 11 digits.");
         RuleFor(x => x.DateOfBirth).NotEmpty().LessThan(DateTime.Now).WithMessage("Date of birth must be in the past.");
         RuleFor(x => x.Salary).GreaterThan(0).WithMessage("Salary must be greater than zero.");
-        RuleFor(x => x.Email).ValidEmail();
     }
 }

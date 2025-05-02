@@ -1,9 +1,10 @@
 using AutoMapper;
 using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Domain;
-using ExpenseTracking.Api.Enum;
 using ExpenseTracking.Api.Impl.Cqrs;
+using ExpenseTracking.Api.Impl.Service;
 using ExpenseTracking.Base;
+using ExpenseTracking.Base.Enum;
 using ExpenseTracking.Schema;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -17,29 +18,25 @@ public class ManagerCommandHandler :
 {
     private readonly AppDbContext dbContext;
     private readonly IMapper mapper;
+    private readonly IUserService userService;
 
-    public ManagerCommandHandler(AppDbContext dbContext, IMapper mapper)
+    public ManagerCommandHandler(AppDbContext dbContext, IMapper mapper, IUserService userService)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
+        this.userService = userService;
     }
 
     public async Task<ApiResponse<CreateManagerResponse>> Handle(CreateManagerCommand request, CancellationToken cancellationToken)
     {
-        if (await dbContext.Managers.AnyAsync(x => x.Email == request.Manager.Email && x.IsActive, cancellationToken))
-            return new ApiResponse<CreateManagerResponse>("Manager already exists");
+        var user = mapper.Map<UserRequest>(request.User);
 
-        var manager = mapper.Map<Manager>(request.User);
-        mapper.Map(request.Manager, manager);
+        var userResponse = await userService.CreateUserAsync(user, UserRole.Manager.ToString());
+        if (userResponse.userEntity == null)
+            return new ApiResponse<CreateManagerResponse>("User creation failed");
 
-        manager.Role = UserRole.Manager.ToString();
-        manager.OpenDate = DateTime.UtcNow;
-        manager.IsActive = true;
-        manager.Secret = PasswordGenerator.GeneratePassword(30);
-        var pwd = PasswordGenerator.GeneratePassword(6);
-        manager.Password = PasswordGenerator.CreateSHA256(pwd, manager.Secret);
-        manager.InsertedUser = "System";
-        manager.InsertedDate = DateTime.UtcNow;
+        var manager = mapper.Map<Manager>(request.Manager);
+        mapper.Map(userResponse.userEntity, manager);
 
         await dbContext.Managers.AddAsync(manager, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -48,24 +45,21 @@ public class ManagerCommandHandler :
         {
             User = mapper.Map<UserResponse>(manager),
             Manager = mapper.Map<ManagerResponse>(manager),
-            PlainPassword = pwd
+            PlainPassword = userResponse.plainPassword
+
         });
     }
 
     public async Task<ApiResponse> Handle(UpdateManagerCommand request, CancellationToken cancellationToken)
     {
-        var entity = await dbContext.Managers.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
-        if (entity == null || !entity.IsActive) return new ApiResponse("Manager not found or inactive");
+        var validation = await GetActiveManager(request.Id, cancellationToken);
+        if (!validation.Success)
+            return new ApiResponse(validation.Message);
+        var entity = validation.Entity!;
 
-        var emailResult = await UpdateEmailIfChanged(request.Manager.Email, entity.Id, cancellationToken);
-        if (emailResult != null) return emailResult;
-
-        entity.FirstName = UpdateIfNotEmpty(request.Manager.FirstName, entity.FirstName);
-        entity.LastName = UpdateIfNotEmpty(request.Manager.LastName, entity.LastName);
-        entity.MiddleName = request.Manager.MiddleName;
-        entity.Email = request.Manager.Email;
-        entity.UpdatedDate = DateTime.UtcNow;
-        entity.UpdatedUser = "System";
+        entity.FirstName = request.Manager.FirstName;
+        entity.LastName = request.Manager.LastName;
+        entity.MiddleName = request.Manager.MiddleName ?? entity.MiddleName;
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return new ApiResponse(true, "Manager successfully updated");
@@ -73,34 +67,36 @@ public class ManagerCommandHandler :
 
     public async Task<ApiResponse> Handle(DeleteManagerCommand request, CancellationToken cancellationToken)
     {
-        var entity = await dbContext.Managers.Include(x => x.Phones).FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
-        if (entity == null) return new ApiResponse("Manager not found");
-        if (!entity.IsActive) return new ApiResponse("Manager is already inactive");
+        var validation = await GetActiveManager(request.Id, cancellationToken);
+        if (!validation.Success)
+            return new ApiResponse(validation.Message);
+
+        var entity = validation.Entity!;
 
         if (await dbContext.Departments.AnyAsync(x => x.ManagerId == request.Id && x.IsActive, cancellationToken))
             return new ApiResponse("Cannot delete manager with active departments");
 
-        if (entity.Phones.Any()) return new ApiResponse("Cannot delete manager with associated phone numbers");
-
         entity.IsActive = false;
-        entity.UpdatedDate = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return new ApiResponse(true, "Manager successfully deleted");
     }
 
-    private async Task<ApiResponse?> UpdateEmailIfChanged(string email, long managerId, CancellationToken cancellationToken)
+    private async Task<(bool Success, string? Message, Manager? Entity)> GetActiveManager(
+      long? managerId, CancellationToken cancellationToken)
     {
-        var existingEmail = (await dbContext.Managers.FirstOrDefaultAsync(x => x.Id == managerId, cancellationToken))?.Email;
+        if (!managerId.HasValue)
+            return (false, "Manager ID is required", null);
 
-        if (string.IsNullOrWhiteSpace(email) || email == existingEmail)
-            return null;
+        var manager = await dbContext.Managers
+            .FirstOrDefaultAsync(e => e.Id == managerId, cancellationToken);
 
-        var emailExists = await dbContext.Managers
-            .AnyAsync(x => x.Email == email && x.Id != managerId && x.IsActive, cancellationToken);
+        if (manager == null)
+            return (false, "Manager not found", null);
 
-        return emailExists ? new ApiResponse("Email already exists") : null;
+        if (!manager.IsActive)
+            return (false, "Manager is inactive", null);
+
+        return (true, null, manager);
     }
-
-    private string UpdateIfNotEmpty(string newValue, string currentValue) => string.IsNullOrWhiteSpace(newValue) ? currentValue : newValue;
 }

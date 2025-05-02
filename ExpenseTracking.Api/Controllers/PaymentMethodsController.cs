@@ -2,14 +2,14 @@ using ExpenseTracking.Api.Impl.Cqrs.PaymentMethod;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExpenseTracking.Api.Controllers;
 
-//ROLE=ADMIN 
 [ApiController]
-[Route("api/[controller]")]
-
+[Route("api/payment-methods")]
+[Authorize(Roles = "Manager")]
 public class PaymentMethodsController : ControllerBase
 {
     private readonly IMediator mediator;
@@ -18,7 +18,7 @@ public class PaymentMethodsController : ControllerBase
         this.mediator = mediator;
     }
 
-    [HttpGet("GetAll")]
+    [HttpGet]
     public async Task<ApiResponse<List<PaymentMethodResponse>>> GetAll()
     {
         var operation = new GetAllPaymentMethodsQuery();
@@ -26,7 +26,7 @@ public class PaymentMethodsController : ControllerBase
         return result;
     }
 
-    [HttpGet("GetById/{id}")]
+    [HttpGet("{id}")]
     public async Task<ApiResponse<PaymentMethodResponse>> GetByIdAsync([FromRoute] int id)
     {
         var operation = new GetPaymentMethodByIdQuery(id);

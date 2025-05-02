@@ -1,6 +1,7 @@
 namespace ExpenseTracking.Api.Impl.Validation;
 using FluentValidation;
 using ExpenseTracking.Schema;
+using ExpenseTracking.Api.Validators;
 
 public class UserValidator : AbstractValidator<UserRequest>
 {
@@ -9,5 +10,7 @@ public class UserValidator : AbstractValidator<UserRequest>
         RuleFor(x => x.UserName).NotEmpty().WithMessage("UserName is required")
             .MinimumLength(3).WithMessage("UserName must be at least 3 characters long")
             .MaximumLength(50).WithMessage("UserName must not exceed 100 characters");
+
+        RuleFor(x => x.Email).ValidEmail();
     }
 }

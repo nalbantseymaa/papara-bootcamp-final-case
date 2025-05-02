@@ -32,18 +32,9 @@ IRequestHandler<DeletePhoneCommand, ApiResponse>
         var entity = mapper.Map<Phone>(request.Phone);
         request.ApplyOwner(entity);
 
-        if (entity.IsDefault)
+        if (entity.IsDefault && await CheckDefaultPhoneExists(entity, cancellationToken))
         {
-            bool hasDefault = await dbContext.Phones.AnyAsync(p =>
-                p.IsActive && p.IsDefault && p.Id != entity.Id &&
-                (
-                    (entity.UserId != null && p.UserId == entity.UserId) ||
-                    (entity.DepartmentId != null && p.DepartmentId == entity.DepartmentId)
-                ),
-                cancellationToken);
-
-            if (hasDefault)
-                return new ApiResponse(false, $"A default phone already exists for this owner {(entity.UserId != null ? "employee" : "department")}.");
+            return new ApiResponse(false, $"The default phone number already exists for {(entity.UserId != null ? "user" : "department")}.");
         }
 
         var entry = await dbContext.Phones.AddAsync(entity, cancellationToken);
@@ -72,13 +63,9 @@ IRequestHandler<DeletePhoneCommand, ApiResponse>
         long? userId = entity.UserId;
         long? departmentId = entity.DepartmentId;
 
-        if (request.Phone.IsDefault)
+        if (request.Phone.IsDefault && await CheckDefaultPhoneExists(entity, cancellationToken))
         {
-            bool isDefaultExists = await dbContext.Phones
-                .AnyAsync(p => p.IsDefault && (p.UserId == userId || p.DepartmentId == departmentId), cancellationToken);
-
-            if (isDefaultExists)
-                return new ApiResponse($"The default phone number already exists for {(userId != null ? "user" : "department")}.");
+            return new ApiResponse(false, $"The default phone number already exists for {(userId != null ? "user" : "department")}.");
         }
 
         entity.CountryCode = request.Phone.CountryCode ?? entity.CountryCode;
@@ -93,12 +80,26 @@ IRequestHandler<DeletePhoneCommand, ApiResponse>
     {
         var entity = await dbContext.Phones.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
 
-        if (entity == null || !entity.IsActive)
-            return new ApiResponse("Phone not found or inactive");
+        if (entity == null)
+            return new ApiResponse("Phone not found");
+
+        if (!entity.IsActive)
+            return new ApiResponse("Phone is inactive");
 
         entity.IsActive = false;
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return new ApiResponse(true, "Phone successfully deleted");
+    }
+
+    private async Task<bool> CheckDefaultPhoneExists(Phone entity, CancellationToken cancellationToken)
+    {
+        return await dbContext.Phones.AnyAsync(p =>
+            p.IsActive && p.IsDefault && p.Id != entity.Id &&
+            (
+                (entity.UserId != null && p.UserId == entity.UserId) ||
+                (entity.DepartmentId != null && p.DepartmentId == entity.DepartmentId)
+            ),
+            cancellationToken);
     }
 }

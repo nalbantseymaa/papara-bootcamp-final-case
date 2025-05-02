@@ -24,12 +24,11 @@ public class MapperConfig : Profile
   {
     CreateMap<EmployeeRequest, Employee>();
     CreateMap<Employee, EmployeeDetailResponse>();
+    CreateMap<UserResponse, Employee>();
     CreateMap<Employee, EmployeeResponse>()
         .ForMember(dest => dest.EmployeeName, opt => opt.MapFrom(src =>
         $"{src.FirstName} {(string.IsNullOrWhiteSpace(src.MiddleName) ? "" : src.MiddleName + " ")}{src.LastName}"))
-        .ForMember(dest => dest.ManagedDepartments,
-                   opt => opt.MapFrom(src =>
-                       src.ManagedDepartments
+        .ForMember(dest => dest.ManagedDepartments, opt => opt.MapFrom(src => src.ManagedDepartments
                           .Select(d => new ManagedDepartmentDto
                           {
                             Id = d.Id,
@@ -45,16 +44,17 @@ public class MapperConfig : Profile
     CreateMap<Manager, ManagerResponse>()
       .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src =>
         $"{src.FirstName} {(string.IsNullOrWhiteSpace(src.MiddleName) ? "" : src.MiddleName + " ")}{src.LastName}"));
-    CreateMap<UserRequest, Manager>();
-    CreateMap<Manager, UserResponse>();
+    CreateMap<UserResponse, Manager>();
+
   }
 
   private void ConfigureUserMappings()
   {
-    CreateMap<UserRequest, Employee>()
-      .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.UserName));
     CreateMap<UserRequest, User>();
     CreateMap<User, UserResponse>();
+    CreateMap<User, Manager>();
+    CreateMap<User, Employee>();
+
   }
 
   private void ConfigureCategoryMappings()
@@ -115,8 +115,6 @@ public class MapperConfig : Profile
       .ForMember(dest => dest.FileSize, opt => opt.MapFrom(src => src.File.Length));
     CreateMap<ExpenseFile, ExpenseFileResponse>()
       .ForMember(dest => dest.ExpenseId, opt => opt.MapFrom(src => src.ExpenseId));
-
-
-
   }
+
 }
