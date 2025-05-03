@@ -2,11 +2,13 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
 using AutoMapper;
+using ExpenseFileTracking.Api.Filter;
 using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Api.Impl.Service;
 using ExpenseTracking.Api.Impl.Validation;
 using ExpenseTracking.Api.Mapper;
+using ExpenseTracking.Api.Middleware;
 using ExpenseTracking.Base;
 using FluentValidation.AspNetCore;
 using MediatR;
@@ -14,6 +16,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Serilog;
 
 namespace ExpenseTracking.Api;
 
@@ -56,6 +59,8 @@ public class Startup
         services.AddScoped<IAppSession, AppSession>();
 
         services.AddScoped<IUserService, UserService>();
+
+        services.AddScoped<LogResourceFilter>();
 
         services.AddAuthentication(x =>
    {
@@ -118,6 +123,7 @@ public class Startup
             AppSession appSession = JwtManager.GetSession(httpContextAccessor.HttpContext);
             return appSession;
         });
+
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -128,6 +134,10 @@ public class Startup
             app.UseSwagger();
             app.UseSwaggerUI();
         }
+
+        app.UseMiddleware<ErrorHandlerMiddleware>();
+
+        app.UseMiddleware<RequestLoggingMiddleware>();
 
         app.UseHttpsRedirection();
 

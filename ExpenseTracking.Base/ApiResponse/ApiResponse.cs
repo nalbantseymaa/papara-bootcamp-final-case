@@ -33,7 +33,6 @@ public class ApiResponse<T>
     public Guid ReferenceNo { get; set; } = Guid.NewGuid();
     public bool Success { get; set; }
 
-
     public string Message { get; set; }
     public T Response { get; set; }
 

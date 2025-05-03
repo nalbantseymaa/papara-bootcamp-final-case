@@ -1,3 +1,4 @@
+using ExpenseFileTracking.Api.Filter;
 using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Api.Schema;
 using ExpenseTracking.Base;
@@ -8,6 +9,7 @@ namespace ExpenseTracking.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[ServiceFilter(typeof(LogResourceFilter))]
 public class AuthorizationController : ControllerBase
 {
     private readonly IMediator mediator;

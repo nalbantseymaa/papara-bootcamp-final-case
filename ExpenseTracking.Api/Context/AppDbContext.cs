@@ -61,7 +61,6 @@ public class AppDbContext : DbContext
             var changedValuesString = JsonConvert.SerializeObject(changedValues.Select(kvp => new { Key = kvp.Key, Value = kvp.Value }));
             var originalValuesString = JsonConvert.SerializeObject(originalValues.Select(kvp => new { Key = kvp.Key, Value = kvp.Value }));
 
-
             var auditLog = new AuditLog
             {
                 EntityName = entry.Entity.GetType().Name,

@@ -1,3 +1,5 @@
+using Serilog;
+
 namespace ExpenseTracking.Api;
 
 public class Program
