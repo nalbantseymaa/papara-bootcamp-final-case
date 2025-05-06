@@ -1,31 +1,21 @@
-namespace ExpenseTracking.Api.Middleware;
+using Serilog;
 
-public class RequestLoggingMiddleware
+namespace ExpenseTracking.Api.Middleware
 {
-    private readonly RequestDelegate next;
-    private readonly ILogger<RequestLoggingMiddleware> logger;
-
-    public RequestLoggingMiddleware(RequestDelegate next, ILogger<RequestLoggingMiddleware> logger)
+    public class RequestLoggingMiddleware
     {
-        this.next = next;
-        this.logger = logger;
-    }
+        private readonly RequestDelegate _next;
 
-    public async Task Invoke(HttpContext context)
-    {
-        var request = context.Request;
+        public RequestLoggingMiddleware(RequestDelegate next)
+        {
+            _next = next;
+        }
 
-        var method = request.Method;
-        var path = request.Path;
-        var queryString = request.QueryString.HasValue ? request.QueryString.Value : "";
-        var ip = context.Connection.RemoteIpAddress?.ToString();
-
-        logger.LogInformation("📥 HTTP Request: {Method} {Path}{QueryString} from {IP}",
-            method, path, queryString, ip);
-
-        await next(context);
-
-        var statusCode = context.Response.StatusCode;
-        logger.LogInformation("📤 HTTP Response: {StatusCode} for {Method} {Path}", statusCode, method, path);
+        public async Task Invoke(HttpContext context)
+        {
+            Log.Information("Handling request: {Method} {Path}", context.Request.Method, context.Request.Path);
+            await _next(context);
+            Log.Information("Finished handling request.");
+        }
     }
 }
