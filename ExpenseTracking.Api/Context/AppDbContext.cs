@@ -1,5 +1,6 @@
 using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Base;
+using ExpenseTracking.Base.Enum;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -40,7 +41,6 @@ public class AppDbContext : DbContext
     public DbSet<PaymentMethod> PaymentMethods { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<Payment> Payments { get; set; }
-
 
     public virtual Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -114,6 +114,47 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Manager>()
             .ToTable("ManagerUsers");
+
+        modelBuilder.Entity<User>().HasData(
+            new User { Id = 1, UserName = "admin", Email = "admin@example.com", Password = PasswordGenerator.CreateSHA256("admin123", "secret"), Secret = PasswordGenerator.GeneratePassword(30), Role = UserRole.Manager.ToString(), InsertedUser = "system", InsertedDate = DateTime.Now },
+            new User { Id = 2, UserName = "admin2", Email = "admin2@example.com", Password = PasswordGenerator.CreateSHA256("admin1234", "secret1"), Secret = PasswordGenerator.GeneratePassword(30), Role = UserRole.Manager.ToString(), InsertedUser = "system", InsertedDate = DateTime.Now },
+            new User { Id = 3, UserName = "employee1", Email = "employee1@example.com", Password = PasswordGenerator.CreateSHA256("employee123", "secret1"), Secret = PasswordGenerator.GeneratePassword(30), Role = UserRole.Employee.ToString(), InsertedUser = "system", InsertedDate = DateTime.Now },
+            new User { Id = 4, UserName = "employee2", Email = "employee2@example.com", Password = PasswordGenerator.CreateSHA256("employee1234", "secret2"), Secret = PasswordGenerator.GeneratePassword(30), Role = UserRole.Employee.ToString(), InsertedUser = "system", InsertedDate = DateTime.Now }
+        );
+
+        modelBuilder.Entity<Department>().HasData(
+            new Department { Id = 1, Name = "HR", Description = "Human Resources", InsertedUser = "system", InsertedDate = DateTime.Now, IsActive = true },
+            new Department
+            {
+                Id = 2,
+                Name = "IT",
+                Description = "Information Technology",
+                InsertedUser = "system",
+                InsertedDate = DateTime.Now,
+                IsActive = true
+            },
+            new Department
+            {
+                Id = 3,
+                Name = "Finance",
+                Description = "Finance Department",
+                InsertedUser = "system",
+                InsertedDate = DateTime.Now,
+                IsActive = true
+            }
+        );
+
+        modelBuilder.Entity<PaymentMethod>().HasData(
+            new PaymentMethod { Id = 1, Name = "Credit Card", InsertedUser = "system", InsertedDate = DateTime.Now, IsActive = true },
+            new PaymentMethod { Id = 2, Name = "Bank Transfer", InsertedUser = "system", InsertedDate = DateTime.Now, IsActive = true },
+            new PaymentMethod { Id = 3, Name = "Cash", InsertedUser = "system", InsertedDate = DateTime.Now, IsActive = true }
+        );
+
+        modelBuilder.Entity<ExpenseCategory>().HasData(
+            new ExpenseCategory { Id = 1, Name = "Travel", InsertedUser = "system", InsertedDate = DateTime.Now, IsActive = true },
+            new ExpenseCategory { Id = 2, Name = "Food", InsertedUser = "system", InsertedDate = DateTime.Now, IsActive = true },
+            new ExpenseCategory { Id = 3, Name = "Office Supplies", InsertedUser = "system", InsertedDate = DateTime.Now, IsActive = true }
+        );
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         base.OnModelCreating(modelBuilder);

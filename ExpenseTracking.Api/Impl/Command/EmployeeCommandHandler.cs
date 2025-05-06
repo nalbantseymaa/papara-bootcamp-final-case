@@ -111,7 +111,6 @@ IRequestHandler<DeleteEmployeeCommand, ApiResponse>
 
     private void InitializeNewEmployee(Employee employee)
     {
-        employee.EmployeeNumber = new Random().Next(1000000, 999999999);
         employee.HireDate = DateTime.UtcNow;
         employee.OpenDate = DateTime.UtcNow;
         employee.IBAN = IbanGenerator.GenerateIban();

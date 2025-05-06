@@ -22,7 +22,6 @@ public class EmployeeDetailResponse : BaseResponse
     public string IdentityNumber { get; set; }
     public DateTime DateOfBirth { get; set; }
     public decimal Salary { get; set; }
-    public int EmployeeNumber { get; set; }
     public DateTime HireDate { get; set; }
     public DateTime? ExitDate { get; set; }
     public ICollection<AddressResponse> Addresses { get; set; }
@@ -38,7 +37,6 @@ public class EmployeeResponse : BaseResponse
     public string IdentityNumber { get; set; }
     public DateTime DateOfBirth { get; set; }
     public decimal Salary { get; set; }
-    public int EmployeeNumber { get; set; }
     public DateTime HireDate { get; set; }
     public DateTime? ExitDate { get; set; }
     public IList<ManagedDepartmentDto> ManagedDepartments { get; set; }

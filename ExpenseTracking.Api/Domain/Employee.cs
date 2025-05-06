@@ -12,7 +12,6 @@ public class Employee : User
     public string IdentityNumber { get; set; }
     public DateTime DateOfBirth { get; set; }
     public decimal Salary { get; set; }
-    public int EmployeeNumber { get; set; }
     public string? IBAN { get; set; }
     public DateTime HireDate { get; set; }
     public DateTime? ExitDate { get; set; }
@@ -35,7 +34,6 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.Property(x => x.DateOfBirth).IsRequired(true);
 
         builder.Property(x => x.Salary).IsRequired().HasPrecision(18, 2);
-        builder.Property(x => x.EmployeeNumber).IsRequired();
         builder.Property(x => x.IBAN).IsRequired().HasMaxLength(26);
         builder.Property(x => x.HireDate).IsRequired(true);
         builder.Property(x => x.ExitDate).IsRequired(false);
@@ -44,8 +42,6 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
             .WithOne(x => x.Employee)
             .HasForeignKey(x => x.EmployeeId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasIndex(x => x.EmployeeNumber).IsUnique(true);
 
         builder.ToTable("Employees");
     }
