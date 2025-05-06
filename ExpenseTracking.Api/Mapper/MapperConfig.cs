@@ -18,6 +18,7 @@ public class MapperConfig : Profile
     ConfigureAddressMappings();
     ConfigureExpenseMappings();
     ConfigureExpenseFileMappings();
+    ConfigurePaymentMappings();
   }
 
   private void ConfigureEmployeeMappings()
@@ -45,7 +46,6 @@ public class MapperConfig : Profile
       .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src =>
         $"{src.FirstName} {(string.IsNullOrWhiteSpace(src.MiddleName) ? "" : src.MiddleName + " ")}{src.LastName}"));
     CreateMap<UserResponse, Manager>();
-
   }
 
   private void ConfigureUserMappings()
@@ -54,7 +54,6 @@ public class MapperConfig : Profile
     CreateMap<User, UserResponse>();
     CreateMap<User, Manager>();
     CreateMap<User, Employee>();
-
   }
 
   private void ConfigureCategoryMappings()
@@ -117,4 +116,18 @@ public class MapperConfig : Profile
       .ForMember(dest => dest.ExpenseId, opt => opt.MapFrom(src => src.ExpenseId));
   }
 
+  private void ConfigurePaymentMappings()
+  {
+
+    CreateMap<PaymentRequest, Payment>();
+    CreateMap<Payment, PaymentResponse>();
+    CreateMap<PaymentResponse, Payment>();
+    CreateMap<Expense, PaymentRequest>()
+      .ForMember(d => d.ExpenseId, o => o.MapFrom(s => s.Id))
+      .ForMember(d => d.EmployeeId, o => o.MapFrom(s => s.Id))
+      .ForMember(d => d.Amount, o => o.MapFrom(s => s.Amount))
+      .ForMember(d => d.Description, o => o.MapFrom(s => s.Description))
+      .ForMember(d => d.IBAN, o => o.MapFrom(s => s.Employee.IBAN));
+
+  }
 }

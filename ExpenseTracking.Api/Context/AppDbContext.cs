@@ -39,6 +39,7 @@ public class AppDbContext : DbContext
     public DbSet<ExpenseFile> ExpenseFiles { get; set; }
     public DbSet<PaymentMethod> PaymentMethods { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
+    public DbSet<Payment> Payments { get; set; }
 
 
     public virtual Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

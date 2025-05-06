@@ -6,6 +6,7 @@ using ExpenseTracking.Base.Enum;
 using ExpenseTracking.Schema;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using ExpenseTracking.Api.Impl.Service;
 
 namespace ExpenseTracking.Api.Impl.Command;
 
@@ -19,12 +20,14 @@ public class ExpenseCommandHandler :
     private readonly AppDbContext dbContext;
     private readonly IMapper mapper;
     private readonly IAppSession appSession;
+    private readonly IPaymentService paymentService;
 
-    public ExpenseCommandHandler(AppDbContext dbContext, IMapper mapper, IAppSession appSession)
+    public ExpenseCommandHandler(AppDbContext dbContext, IMapper mapper, IAppSession appSession, IPaymentService paymentService)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
         this.appSession = appSession;
+        this.paymentService = paymentService;
     }
 
     public async Task<ApiResponse<ExpenseResponse>> Handle(CreateExpenseCommand request, CancellationToken cancellationToken)
@@ -55,22 +58,26 @@ public class ExpenseCommandHandler :
 
     public async Task<ApiResponse> Handle(ApproveExpenseCommand request, CancellationToken cancellationToken)
     {
-        var expenseCheck = await ValidateEntity(dbContext.Expenses, request.Id, "Expense", cancellationToken);
-        if (!expenseCheck.isValid) return new ApiResponse(expenseCheck.errorMessage!);
+        var expense = await dbContext.Expenses.Include(e => e.Employee)
+    .FirstOrDefaultAsync(e => e.Id == request.Id, cancellationToken);
 
-        var expense = expenseCheck.entity!;
+        if (expense == null) return new ApiResponse(false, "Expense not found.");
+
+        var expenseCheck = await ValidateEntity(dbContext.Expenses, expense.Id, "Expense", cancellationToken);
+        if (!expenseCheck.isValid) return new ApiResponse(expenseCheck.errorMessage!);
 
         if (expense.Status != ExpenseStatus.Pending)
             return new ApiResponse($"Cannot approve expense in {expense.Status} status. Only pending expenses can be approved.");
 
-        expense.Status = ExpenseStatus.Approved;
+        var paymentRequest = mapper.Map<PaymentRequest>(expense);
+        var payment = await paymentService.ProcessPaymentAsync(paymentRequest, cancellationToken);
+
+        expense.Status = ExpenseStatus.Paid;
         expense.ApprovedDate = DateTime.UtcNow;
-        expense.IsActive = false; // Onaylandıktan sonra harcama pasif hale getiriliyor
-        //ödeme servisine yönlendirilir
+        expense.IsActive = false;
 
         await dbContext.SaveChangesAsync(cancellationToken);
-
-        return new ApiResponse(true, "Expense approved successfully");
+        return new ApiResponse(payment.Success, payment.Message);
     }
 
     public async Task<ApiResponse> Handle(RejectExpenseCommand request, CancellationToken cancellationToken)

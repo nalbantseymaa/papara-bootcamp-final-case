@@ -42,9 +42,9 @@ public class ExpenseController : ControllerBase
     [Authorize(Roles = "Manager,Employee")]
     public async Task<ApiResponse<List<ExpenseResponse>>> GetByParameters([FromQuery] long? categoryId,
     [FromQuery] long? paymentMethodId, [FromQuery] decimal? minAmount, [FromQuery] decimal? maxAmount,
-    [FromQuery] ExpenseStatus? status, [FromQuery] bool? isPaid, [FromQuery] string? location)
+    [FromQuery] ExpenseStatus? status, [FromQuery] string? location)
     {
-        var operation = new GetExpensesByParametersQuery(categoryId, paymentMethodId, minAmount, maxAmount, status, isPaid, location);
+        var operation = new GetExpensesByParametersQuery(categoryId, paymentMethodId, minAmount, maxAmount, status, location);
         var result = await mediator.Send(operation);
         return result;
     }

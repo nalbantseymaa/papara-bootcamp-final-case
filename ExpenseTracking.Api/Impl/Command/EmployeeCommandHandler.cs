@@ -3,6 +3,7 @@ using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Api.Impl.Service;
+using ExpenseTracking.Api.Impl.Service.Helper;
 using ExpenseTracking.Base;
 using ExpenseTracking.Base.Enum;
 using ExpenseTracking.Schema;
@@ -113,6 +114,7 @@ IRequestHandler<DeleteEmployeeCommand, ApiResponse>
         employee.EmployeeNumber = new Random().Next(1000000, 999999999);
         employee.HireDate = DateTime.UtcNow;
         employee.OpenDate = DateTime.UtcNow;
+        employee.IBAN = IbanGenerator.GenerateIban();
     }
 
     private async Task<(bool IsValid, Department? Department, string? ErrorMessage)> ValidateDepartmentAsync(long departmentId, CancellationToken cancellationToken)

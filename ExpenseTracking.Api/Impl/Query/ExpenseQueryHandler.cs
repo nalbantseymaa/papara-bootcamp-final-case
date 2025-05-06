@@ -69,7 +69,6 @@ IRequestHandler<GetExpensesByParametersQuery, ApiResponse<List<ExpenseResponse>>
         if (request.MinAmount.HasValue) predicate = predicate.And(e => e.Amount >= request.MinAmount);
         if (request.MaxAmount.HasValue) predicate = predicate.And(e => e.Amount <= request.MaxAmount);
         if (request.Status.HasValue) predicate = predicate.And(e => e.Status == request.Status);
-        if (request.IsPaid.HasValue) predicate = predicate.And(e => e.IsPaid == request.IsPaid);
         if (!string.IsNullOrWhiteSpace(request.Location)) predicate = predicate.And(e => e.Location.Contains(request.Location));
 
         var expenses = await dbContext.Expenses.Include(e => e.Employee)

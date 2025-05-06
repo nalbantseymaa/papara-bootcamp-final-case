@@ -13,11 +13,13 @@ public class Employee : User
     public DateTime DateOfBirth { get; set; }
     public decimal Salary { get; set; }
     public int EmployeeNumber { get; set; }
+    public string? IBAN { get; set; }
     public DateTime HireDate { get; set; }
     public DateTime? ExitDate { get; set; }
     public Department Department { get; set; }
     public ICollection<Department> ManagedDepartments { get; set; }
     public virtual ICollection<Expense> Expenses { get; set; }
+    public virtual ICollection<Payment> Payments { get; set; } // Ödemeler
 }
 
 public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
@@ -34,6 +36,7 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
 
         builder.Property(x => x.Salary).IsRequired().HasPrecision(18, 2);
         builder.Property(x => x.EmployeeNumber).IsRequired();
+        builder.Property(x => x.IBAN).IsRequired().HasMaxLength(26);
         builder.Property(x => x.HireDate).IsRequired(true);
         builder.Property(x => x.ExitDate).IsRequired(false);
 
