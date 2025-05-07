@@ -59,7 +59,7 @@ IRequestHandler<GetExpensesByParametersQuery, ApiResponse<List<ExpenseResponse>>
 
     public async Task<ApiResponse<List<ExpenseResponse>>> Handle(GetExpensesByParametersQuery request, CancellationToken cancellationToken)
     {
-        var predicate = PredicateBuilder.New<Expense>(e => e.IsActive);
+        var predicate = PredicateBuilder.New<Expense>(true);
 
         if (appSession.UserRole != UserRole.Manager.ToString())
             predicate = predicate.And(e => e.EmployeeId == long.Parse(appSession.UserId));

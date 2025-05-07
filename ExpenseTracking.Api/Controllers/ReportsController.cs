@@ -18,9 +18,10 @@ public class ReportsController : ControllerBase
     }
 
     /// <summary>
-    /// Şirket genelinde toplam harcama tutarını getirir.
+    /// Retrieves a detailed company expense report for a specified reporting period.
     /// </summary>
-    /// <param name="period">daily, weekly, monthly</param>
+    /// <param name="period">The reporting period for which the company expense report is requested. Can be 'Daily', 'Weekly', or 'Monthly'.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the company expense report.</returns>
     [HttpGet("company/total")]
     [Authorize(Roles = "Manager")]
     public async Task<CompanyReportResponse> GetCompanyReport([FromQuery] ReportPeriod period)
@@ -31,9 +32,10 @@ public class ReportsController : ControllerBase
     }
 
     /// <summary>
-    /// Statü bazlı (onaylanan / reddedilen) harcama özetini getirir.
+    /// Retrieves a detailed company expense report by status for a specified reporting period.
     /// </summary>
-    /// <param name="period">daily, weekly, monthly</param>
+    /// <param name="period">The reporting period for which the company expense report by status is requested. Can be 'Daily', 'Weekly', or 'Monthly'.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the company expense report by status.</returns>
     [HttpGet("company/by-status")]
     [Authorize(Roles = "Manager")]
     public async Task<List<PeriodSummary>> GetCompanyByStatus([FromQuery] ReportPeriod period)
@@ -44,9 +46,11 @@ public class ReportsController : ControllerBase
     }
 
     /// <summary>
-    /// Personel bazlı harcama yoğunluğunu getirir.
+    /// Retrieves a detailed company expense report by employee for a specified reporting period.
     /// </summary>
-    /// <param name="period">daily, weekly, monthly</param>
+    /// <param name="period">The reporting period for which the company expense report by employee is requested. Can be 'Daily', 'Weekly', or 'Monthly'.</param>
+    /// <param name="employeeId">The ID of the employee for which the company expense report by employee is requested. If null, the report will be generated for all employees.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the company expense report by employee.</returns>
     [HttpGet("company/by-employee")]
     [Authorize(Roles = "Manager")]
     public async Task<List<EmployeeReportResponse>> GetCompanyByEmployee(
@@ -59,8 +63,9 @@ public class ReportsController : ControllerBase
     }
 
     /// <summary>
-    /// Personel bazlı harcama özetini getirir.
+    /// Retrieves the expense report for the authenticated employee.
     /// </summary>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the employee's expense report.</returns>
     [HttpGet("GetEmployeeExpenses")]
     [Authorize(Roles = "Employee")]
     public async Task<EmployeeExpenseReportResponse> GetEmployeeExpenses()

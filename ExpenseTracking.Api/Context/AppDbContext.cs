@@ -116,10 +116,10 @@ public class AppDbContext : DbContext
             .ToTable("ManagerUsers");
 
         modelBuilder.Entity<User>().HasData(
-            new User { Id = 1, UserName = "admin", Email = "admin@example.com", Password = PasswordGenerator.CreateSHA256("admin123", "secret"), Secret = PasswordGenerator.GeneratePassword(30), Role = UserRole.Manager.ToString(), InsertedUser = "system", InsertedDate = DateTime.Now },
-            new User { Id = 2, UserName = "admin2", Email = "admin2@example.com", Password = PasswordGenerator.CreateSHA256("admin1234", "secret1"), Secret = PasswordGenerator.GeneratePassword(30), Role = UserRole.Manager.ToString(), InsertedUser = "system", InsertedDate = DateTime.Now },
-            new User { Id = 3, UserName = "employee1", Email = "employee1@example.com", Password = PasswordGenerator.CreateSHA256("employee123", "secret1"), Secret = PasswordGenerator.GeneratePassword(30), Role = UserRole.Employee.ToString(), InsertedUser = "system", InsertedDate = DateTime.Now },
-            new User { Id = 4, UserName = "employee2", Email = "employee2@example.com", Password = PasswordGenerator.CreateSHA256("employee1234", "secret2"), Secret = PasswordGenerator.GeneratePassword(30), Role = UserRole.Employee.ToString(), InsertedUser = "system", InsertedDate = DateTime.Now }
+            new User { Id = 1, UserName = "admin", Email = "admin@example.com", Password = PasswordGenerator.CreateSHA256("admin123", "secret"), Secret = "secret", Role = UserRole.Manager.ToString(), InsertedUser = "system", InsertedDate = DateTime.Now },
+            new User { Id = 2, UserName = "admin2", Email = "admin2@example.com", Password = PasswordGenerator.CreateSHA256("admin1234", "secret"), Secret = "secret", Role = UserRole.Manager.ToString(), InsertedUser = "system", InsertedDate = DateTime.Now },
+            new User { Id = 3, UserName = "employee1", Email = "employee1@example.com", Password = PasswordGenerator.CreateSHA256("employee123", "secret"), Secret = "secret", Role = UserRole.Employee.ToString(), InsertedUser = "system", InsertedDate = DateTime.Now },
+            new User { Id = 4, UserName = "employee2", Email = "employee2@example.com", Password = PasswordGenerator.CreateSHA256("employee1234", "secret"), Secret = "secret", Role = UserRole.Employee.ToString(), InsertedUser = "system", InsertedDate = DateTime.Now }
         );
 
         modelBuilder.Entity<Department>().HasData(

@@ -123,11 +123,10 @@ public class MapperConfig : Profile
     CreateMap<Payment, PaymentResponse>();
     CreateMap<PaymentResponse, Payment>();
     CreateMap<Expense, PaymentRequest>()
-      .ForMember(d => d.ExpenseId, o => o.MapFrom(s => s.Id))
-      .ForMember(d => d.EmployeeId, o => o.MapFrom(s => s.Id))
-      .ForMember(d => d.Amount, o => o.MapFrom(s => s.Amount))
-      .ForMember(d => d.Description, o => o.MapFrom(s => s.Description))
-      .ForMember(d => d.IBAN, o => o.MapFrom(s => s.Employee.IBAN));
-
+    .ForMember(d => d.ExpenseId, o => o.MapFrom(s => s.Id))
+    .ForMember(d => d.EmployeeId, o => o.MapFrom(s => s.Employee.Id))
+    .ForMember(d => d.Amount, o => o.MapFrom(s => s.Amount))
+    .ForMember(d => d.Description, o => o.MapFrom(s => s.Description))
+    .ForMember(d => d.IBAN, o => o.MapFrom(s => s.Employee.IBAN));
   }
 }

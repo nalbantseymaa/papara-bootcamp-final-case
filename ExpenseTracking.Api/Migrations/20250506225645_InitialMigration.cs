@@ -1,4 +1,5 @@
 ﻿using System;
+using ExpenseTracking.Base;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -377,13 +378,13 @@ namespace ExpenseTracking.Api.Migrations
 
             migrationBuilder.InsertData(
                 table: "Users",
-                columns: new[] { "Id", "Email", "InsertedDate", "InsertedUser", "LastLoginDate", "OpenDate", "Password", "Role", "Secret", "UpdatedDate", "UpdatedUser", "UserName" },
+                columns: new[] { "Id", "UserName", "Email", "Password", "Secret", "Role", "InsertedUser", "InsertedDate", "OpenDate" },
                 values: new object[,]
                 {
-                    { 1L, "admin@example.com", new DateTime(2025, 5, 7, 1, 56, 44, 456, DateTimeKind.Local).AddTicks(3664), "system", null, new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "9E3CB93E91ACB73F8E58BB85958B24F2272E9AE5C3D1452BDA8D3363AE8E2735", "Manager", "XCjYRf8lc1oZTnCJ50lVoULzVpOJEZ", null, null, "admin" },
-                    { 2L, "admin2@example.com", new DateTime(2025, 5, 7, 1, 56, 44, 456, DateTimeKind.Local).AddTicks(3704), "system", null, new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "51C0DA57AB3532FF89CFB58EDDA130B5FC4D825CC9DB78F7813DC78182255BDE", "Manager", "vrqzV1DLbri6LTB58PZ7mY2xwUl04f", null, null, "admin2" },
-                    { 3L, "employee1@example.com", new DateTime(2025, 5, 7, 1, 56, 44, 456, DateTimeKind.Local).AddTicks(3727), "system", null, new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "F6FE22F8BA0D7CECECA82CA88C22EEA094360CE19BBEC4A75BF0C07F545B5A0E", "Employee", "1hEhfeUKk87MUa4o9T98I7FVTEigFg", null, null, "employee1" },
-                    { 4L, "employee2@example.com", new DateTime(2025, 5, 7, 1, 56, 44, 456, DateTimeKind.Local).AddTicks(3763), "system", null, new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "700CDD4B58551125D08B13C1075F57BF74CE9487030A4717DDDAE2C96B1BA274", "Employee", "CV4kOHsUAUrrpOIsNGGnpZG3052MJH", null, null, "employee2" }
+                    { 1L, "admin", "admin@example.com", PasswordGenerator.CreateSHA256("admin123", "secret"), "secret", "Manager", "system", DateTime.UtcNow, DateTime.UtcNow },
+                    { 2L, "admin2", "admin2@example.com", PasswordGenerator.CreateSHA256("admin1234", "secret"), "secret", "Manager", "system", DateTime.UtcNow, DateTime.UtcNow },
+                    { 3L, "employee1", "employee1@example.com", PasswordGenerator.CreateSHA256("employee123", "secret"), "secret", "Employee", "system", DateTime.UtcNow, DateTime.UtcNow },
+                    { 4L, "employee2", "employee2@example.com", PasswordGenerator.CreateSHA256("employee1234", "secret"), "secret", "Employee", "system", DateTime.UtcNow, DateTime.UtcNow }
                 });
 
             migrationBuilder.InsertData(
