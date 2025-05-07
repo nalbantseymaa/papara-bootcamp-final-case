@@ -23,7 +23,8 @@ Authorization: Bearer <token>
 ```
 
 ### Örnek Testler
-API testleri ve örnek senaryoları içeren bir PDF dosyasını [buradan](./docs/API_Test_Examples.pdf) indirebilirsiniz.
+API testleri ve örnek senaryoları içeren bir PDF dosyasını [buradan] [Papara_ExpenseTracking.pdf](https://github.com/user-attachments/files/20075348/Papara_ExpenseTracking.pdf) indirebilirsiniz.
+
 
 ## MSSQL ve PostgreSQL Kurulum Notları
 
