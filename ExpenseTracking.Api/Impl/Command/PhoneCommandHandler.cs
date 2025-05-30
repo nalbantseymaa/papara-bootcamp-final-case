@@ -2,9 +2,10 @@ using AutoMapper;
 using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs;
+using ExpenseTracking.Api.Impl.GenericValidator;
+using ExpenseTracking.Api.Impl.UnitOfWork;
 using ExpenseTracking.Api.Interfaces;
 using ExpenseTracking.Base;
-using ExpenseTracking.Schema;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,11 +20,15 @@ IRequestHandler<DeletePhoneCommand, ApiResponse>
 {
     private readonly AppDbContext dbContext;
     private readonly IMapper mapper;
+    private readonly IGenericEntityValidator genericEntityValidator;
+    private readonly IUnitOfWork unitOfWork;
 
-    public PhoneCommandHandler(AppDbContext dbContext, IMapper mapper)
+    public PhoneCommandHandler(AppDbContext dbContext, IMapper mapper, IUnitOfWork unitOfWork, IGenericEntityValidator genericEntityValidator)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
+        this.unitOfWork = unitOfWork;
+        this.genericEntityValidator = genericEntityValidator;
     }
 
     private async Task<ApiResponse> CreatePhone<T>(T request,
@@ -37,58 +42,71 @@ IRequestHandler<DeletePhoneCommand, ApiResponse>
             return new ApiResponse(false, $"The default phone number already exists for {(entity.UserId != null ? "user" : "department")}.");
         }
 
-        var entry = await dbContext.Phones.AddAsync(entity, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.Repository<Phone>().AddAsync(entity);
+        await unitOfWork.CommitAsync();
 
-        var phone = mapper.Map<PhoneResponse>(entry.Entity);
         return new ApiResponse(true, "Phone successfully created");
     }
 
     public async Task<ApiResponse> Handle(CreatePhoneForEmployeeCommand request, CancellationToken cancellationToken)
-       => await CreatePhone(request, cancellationToken);
+    {
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Phones, request.EmployeeId, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse(validationResult.ErrorMessage!);
+
+        return await CreatePhone(request, cancellationToken);
+    }
 
     public async Task<ApiResponse> Handle(CreatePhoneForDepartmentCommand request, CancellationToken cancellationToken)
-        => await CreatePhone(request, cancellationToken);
+    {
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Departments, request.DepartmentId, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse(validationResult.ErrorMessage!);
+
+        return await CreatePhone(request, cancellationToken);
+    }
 
     public async Task<ApiResponse> Handle(CreatePhoneForManagerCommand request, CancellationToken cancellationToken)
-        => await CreatePhone(request, cancellationToken);
+    {
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Managers, request.ManagerId, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse(validationResult.ErrorMessage!);
+
+        return await CreatePhone(request, cancellationToken);
+    }
 
     public async Task<ApiResponse> Handle(UpdatePhoneCommand request, CancellationToken cancellationToken)
     {
-        var entity = await dbContext.Phones.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Phones, request.Id, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse(validationResult.ErrorMessage!);
 
-        if (entity == null || !entity.IsActive)
-            return new ApiResponse("Phone not found or inactive");
-
-        long? userId = entity.UserId;
-        long? departmentId = entity.DepartmentId;
+        var entity = validationResult.Entity;
 
         if (request.Phone.IsDefault && await CheckDefaultPhoneExists(entity, cancellationToken))
         {
-            return new ApiResponse(false, $"The default phone number already exists for {(userId != null ? "user" : "department")}.");
+            return new ApiResponse(false, $"The default phone number already exists for {(entity.UserId != null ? "user" : "department")}.");
         }
 
         entity.CountryCode = request.Phone.CountryCode ?? entity.CountryCode;
         entity.PhoneNumber = request.Phone.PhoneNumber ?? entity.PhoneNumber;
         entity.IsDefault = request.Phone.IsDefault;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<Phone>().Update(entity);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, "Phone successfully updated");
     }
 
     public async Task<ApiResponse> Handle(DeletePhoneCommand request, CancellationToken cancellationToken)
     {
-        var entity = await dbContext.Phones.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Phones, request.Id, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse(validationResult.ErrorMessage!);
 
-        if (entity == null)
-            return new ApiResponse("Phone not found");
+        validationResult.Entity.IsActive = false;
 
-        if (!entity.IsActive)
-            return new ApiResponse("Phone is inactive");
-
-        entity.IsActive = false;
-
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<Phone>().Remove(validationResult.Entity);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, "Phone successfully deleted");
     }
 

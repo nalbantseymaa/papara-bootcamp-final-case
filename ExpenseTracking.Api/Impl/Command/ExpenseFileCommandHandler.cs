@@ -2,6 +2,8 @@ using AutoMapper;
 using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs;
+using ExpenseTracking.Api.Impl.GenericValidator;
+using ExpenseTracking.Api.Impl.UnitOfWork;
 using ExpenseTracking.Base;
 using ExpenseTracking.Base.Enum;
 using ExpenseTracking.Schema;
@@ -18,11 +20,11 @@ public class ExpenseFileCommandHandler :
     private readonly AppDbContext dbContext;
     private readonly IMapper mapper;
     private readonly IAppSession appSession;
+    private readonly IUnitOfWork unitOfWork;
+    private readonly IGenericEntityValidator genericEntityValidator;
 
     private static class Message
     {
-        public const string NotFound = "not found";
-        public const string Inactive = "is inactive";
         public const string BadFormat = "Unsupported file format";
         public const string UploadSuccess = "File uploaded successfully";
         public const string UpdateSuccess = "File updated successfully";
@@ -33,17 +35,21 @@ public class ExpenseFileCommandHandler :
         public const string CannotDeleteUser = "Employee can only delete files belonging to pending expenses";
     }
 
-    public ExpenseFileCommandHandler(AppDbContext dbContext, IMapper mapper, IAppSession appSession)
+    public ExpenseFileCommandHandler(AppDbContext dbContext, IMapper mapper, IAppSession appSession,
+        IUnitOfWork unitOfWork, IGenericEntityValidator genericEntityValidator)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
         this.appSession = appSession;
+        this.unitOfWork = unitOfWork;
+        this.genericEntityValidator = genericEntityValidator;
     }
 
     public async Task<ApiResponse> Handle(CreateExpenseFileCommand request, CancellationToken cancellationToken)
     {
-        var (isValid, expense, errorMessage) = await ValidateExpenseAsync(request.ExpenseFile.ExpenseId, cancellationToken);
-        if (!isValid) return new ApiResponse(false, errorMessage!);
+        var validateResultExpense = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Expenses, request.ExpenseFile.ExpenseId, cancellationToken);
+        if (!validateResultExpense.IsValid)
+            return new ApiResponse(false, validateResultExpense.ErrorMessage!);
 
         var fileExtension = Path.GetExtension(request.ExpenseFile.File.FileName).ToLowerInvariant();
         var fileType = GetFileType(fileExtension);
@@ -60,17 +66,20 @@ public class ExpenseFileCommandHandler :
         mapped.FileData = fileData;
         mapped.FileType = fileType.Value;
 
-        var entity = await dbContext.ExpenseFiles.AddAsync(mapped, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        var response = mapper.Map<ExpenseFileResponse>(entity.Entity);
+        await unitOfWork.Repository<ExpenseFile>().AddAsync(mapped);
+        await unitOfWork.CommitAsync();
+        var response = mapper.Map<ExpenseFileResponse>(mapped);
         return new ApiResponse(true, Message.UploadSuccess);
     }
 
     public async Task<ApiResponse> Handle(UpdateExpenseFileCommand request, CancellationToken cancellationToken)
     {
-        var (isValid, expenseFile, errorMessage) = await ValidateExpenseFileAsync(request.Id, cancellationToken);
-        if (!isValid) return new ApiResponse(false, errorMessage!);
+
+        var validateResultExpenseFile = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.ExpenseFiles, request.Id, cancellationToken);
+        if (!validateResultExpenseFile.IsValid)
+            return new ApiResponse(false, validateResultExpenseFile.ErrorMessage!);
+
+        var expenseFile = validateResultExpenseFile.Entity!;
 
         var expenseStatus = await GetExpenseStatusAsync(expenseFile.ExpenseId, cancellationToken);
         if (expenseStatus != ExpenseStatus.Pending) return new ApiResponse(Message.CannotUpdate);
@@ -87,15 +96,18 @@ public class ExpenseFileCommandHandler :
         expenseFile.FileData = fileData;
         expenseFile.FileSize = fileData.Length;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<ExpenseFile>().Update(expenseFile);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, Message.UpdateSuccess);
     }
 
     public async Task<ApiResponse> Handle(DeleteExpenseFileCommand request, CancellationToken cancellationToken)
     {
-        var (isValid, expenseFile, errorMessage) = await ValidateExpenseFileAsync(request.Id, cancellationToken);
-        if (!isValid)
-            return new ApiResponse(false, errorMessage!);
+        var ValidateResultExpenseFile = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.ExpenseFiles, request.Id, cancellationToken);
+        if (!ValidateResultExpenseFile.IsValid)
+            return new ApiResponse(false, ValidateResultExpenseFile.ErrorMessage!);
+
+        var expenseFile = ValidateResultExpenseFile.Entity!;
 
         var isManager = appSession.UserRole == UserRole.Manager.ToString();
 
@@ -107,7 +119,8 @@ public class ExpenseFileCommandHandler :
 
         expenseFile.IsActive = false;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<ExpenseFile>().Remove(expenseFile);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, Message.DeleteSuccess);
     }
 
@@ -138,34 +151,5 @@ public class ExpenseFileCommandHandler :
             .FirstOrDefaultAsync(cancellationToken);
 
         return expense;
-    }
-
-    private async Task<(bool IsValid, Expense? Expense, string? ErrorMessage)> ValidateExpenseAsync(long expenseId, CancellationToken cancellationToken)
-    {
-        var expense = await dbContext.Expenses
-            .Where(x => x.Id == expenseId)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (expense == null)
-            return (false, null, $"{nameof(Expense)} {Message.NotFound}");
-
-        if (!expense.IsActive)
-            return (false, null, $"{nameof(Expense)} {Message.Inactive}");
-
-        return (true, expense, null);
-    }
-
-    private async Task<(bool IsValid, ExpenseFile? ExpenseFile, string? ErrorMessage)> ValidateExpenseFileAsync(long expenseFileId, CancellationToken cancellationToken)
-    {
-        var expenseFile = await dbContext.ExpenseFiles
-            .FirstOrDefaultAsync(d => d.Id == expenseFileId, cancellationToken);
-
-        if (expenseFile == null)
-            return (false, null, $"{nameof(ExpenseFile)} {Message.NotFound}");
-
-        if (!expenseFile.IsActive)
-            return (false, null, $"{nameof(ExpenseFile)} {Message.Inactive}");
-
-        return (true, expenseFile, null);
     }
 }

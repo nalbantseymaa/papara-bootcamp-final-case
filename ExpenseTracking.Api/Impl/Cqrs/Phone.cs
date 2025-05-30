@@ -7,7 +7,7 @@ using MediatR;
 namespace ExpenseTracking.Api.Impl.Cqrs;
 
 public record GetAllPhonesQuery : IRequest<ApiResponse<List<PhoneResponse>>>;
-public record GetPhonesByIdQuery(int Id) : IRequest<ApiResponse<PhoneResponse>>;
+public record GetPhonesByIdQuery(long Id) : IRequest<ApiResponse<PhoneResponse>>;
 public record CreatePhoneForEmployeeCommand(long EmployeeId, PhoneRequest Phone)
     : IRequest<ApiResponse>, ICreatePhoneCommand
 {
@@ -25,6 +25,5 @@ public record CreatePhoneForManagerCommand(long ManagerId, PhoneRequest Phone)
 {
   public void ApplyOwner(Phone e) => e.UserId = ManagerId;
 }
-
-public record UpdatePhoneCommand(int Id, PhoneRequest Phone) : IRequest<ApiResponse>;
-public record DeletePhoneCommand(int Id) : IRequest<ApiResponse>;
+public record UpdatePhoneCommand(long Id, PhoneRequest Phone) : IRequest<ApiResponse>;
+public record DeletePhoneCommand(long Id) : IRequest<ApiResponse>;

@@ -2,6 +2,8 @@ using AutoMapper;
 using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs.PaymentMethod;
+using ExpenseTracking.Api.Impl.GenericValidator;
+using ExpenseTracking.Api.Impl.UnitOfWork;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
@@ -16,11 +18,15 @@ public class PaymentMethodCommandHandler :
 {
     private readonly AppDbContext dbContext;
     private readonly IMapper mapper;
+    private readonly IGenericEntityValidator genericEntityValidator;
+    private readonly IUnitOfWork unitOfWork;
 
-    public PaymentMethodCommandHandler(AppDbContext dbContext, IMapper mapper)
+    public PaymentMethodCommandHandler(AppDbContext dbContext, IMapper mapper, IGenericEntityValidator genericEntityValidator, IUnitOfWork unitOfWork)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
+        this.genericEntityValidator = genericEntityValidator;
+        this.unitOfWork = unitOfWork;
     }
 
     public async Task<ApiResponse<PaymentMethodResponse>> Handle(CreatePaymentMethodCommand request, CancellationToken cancellationToken)
@@ -28,7 +34,8 @@ public class PaymentMethodCommandHandler :
         var mapped = mapper.Map<PaymentMethod>(request.PaymentMethod);
         mapped.IsActive = true;
         var entity = await dbContext.AddAsync(mapped, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.Repository<PaymentMethod>().AddAsync(mapped);
+        await unitOfWork.CommitAsync();
 
         var response = mapper.Map<PaymentMethodResponse>(entity.Entity);
         return new ApiResponse<PaymentMethodResponse>(response);
@@ -36,25 +43,22 @@ public class PaymentMethodCommandHandler :
 
     public async Task<ApiResponse> Handle(UpdatePaymentMethodCommand request, CancellationToken cancellationToken)
     {
-        var validation = await GetActivePaymentMethod(request.Id, cancellationToken);
-        if (!validation.Success)
-            return new ApiResponse(validation.Message);
-        var entity = validation.Entity!;
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.PaymentMethods, request.Id, cancellationToken);
+        var entity = validationResult.Entity!;
 
         entity.Name = string.IsNullOrWhiteSpace(request.PaymentMethod.Name) ? entity.Name : request.PaymentMethod.Name;
         entity.Description = string.IsNullOrWhiteSpace(request.PaymentMethod.Description) ? entity.Description : request.PaymentMethod.Description;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<PaymentMethod>().Update(entity);
+        await unitOfWork.CommitAsync();
+
         return new ApiResponse(true, "PaymentMethod successfully updated");
     }
 
     public async Task<ApiResponse> Handle(DeletePaymentMethodCommand request, CancellationToken cancellationToken)
     {
-        var validation = await GetActivePaymentMethod(request.Id, cancellationToken);
-        if (!validation.Success)
-            return new ApiResponse(validation.Message);
-
-        var entity = validation.Entity!;
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.PaymentMethods, request.Id, cancellationToken);
+        var entity = validationResult.Entity!;
 
         bool hasExpenses = await dbContext.Expenses
            .AnyAsync(e => e.PaymentMethodId == request.Id, cancellationToken);
@@ -63,25 +67,8 @@ public class PaymentMethodCommandHandler :
 
         entity.IsActive = false;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<PaymentMethod>().Remove(entity);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, "PaymentMethod successfully deleted");
-    }
-
-    private async Task<(bool Success, string? Message, PaymentMethod? Entity)> GetActivePaymentMethod(
-    long? paymentMethodId, CancellationToken cancellationToken)
-    {
-        if (!paymentMethodId.HasValue)
-            return (false, "PaymentMethod ID is required", null);
-
-        var paymentMethod = await dbContext.PaymentMethods
-            .FirstOrDefaultAsync(e => e.Id == paymentMethodId, cancellationToken);
-
-        if (paymentMethod == null)
-            return (false, "PaymentMethod not found", null);
-
-        if (!paymentMethod.IsActive)
-            return (false, "PaymentMethod is inactive", null);
-
-        return (true, null, paymentMethod);
     }
 }

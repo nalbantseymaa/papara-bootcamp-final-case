@@ -2,6 +2,8 @@ using AutoMapper;
 using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs.Category;
+using ExpenseTracking.Api.Impl.GenericValidator;
+using ExpenseTracking.Api.Impl.UnitOfWork;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
@@ -16,11 +18,15 @@ public class ExpenseCategoryCommandHandler :
 {
     private readonly AppDbContext dbContext;
     private readonly IMapper mapper;
+    private readonly IUnitOfWork unitOfWork;
+    private readonly IGenericEntityValidator genericEntityValidator;
 
-    public ExpenseCategoryCommandHandler(AppDbContext dbContext, IMapper mapper)
+    public ExpenseCategoryCommandHandler(AppDbContext dbContext, IMapper mapper, IUnitOfWork unitOfWork, IGenericEntityValidator genericEntityValidator)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
+        this.unitOfWork = unitOfWork;
+        this.genericEntityValidator = genericEntityValidator;
     }
 
     public async Task<ApiResponse<CategoryResponse>> Handle(CreateCategoryCommand request, CancellationToken cancellationToken)
@@ -31,63 +37,48 @@ public class ExpenseCategoryCommandHandler :
 
         var mapped = mapper.Map<ExpenseCategory>(request.Category);
 
-        var entity = await dbContext.AddAsync(mapped, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.Repository<ExpenseCategory>().AddAsync(mapped);
+        await unitOfWork.CommitAsync();
 
-        var response = mapper.Map<CategoryResponse>(entity.Entity);
+        var response = mapper.Map<CategoryResponse>(mapped);
         return new ApiResponse<CategoryResponse>(response);
     }
 
     public async Task<ApiResponse> Handle(UpdateCategoryCommand request, CancellationToken cancellationToken)
     {
-        var validation = await ValidateCategoryAsync(request.Id, cancellationToken);
-        if (!validation.Success)
-            return validation;
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.ExpenseCategories, request.Id, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse(validationResult.ErrorMessage!);
 
-        var entity = await dbContext.ExpenseCategories.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+        var entity = await unitOfWork.Repository<ExpenseCategory>()
+            .GetByIdAsync(request.Id);
 
         entity.Name = string.IsNullOrWhiteSpace(request.Category.Name) ? entity.Name : request.Category.Name;
         entity.Description = string.IsNullOrWhiteSpace(request.Category.Description) ? entity.Description : request.Category.Description;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<ExpenseCategory>().Update(entity);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, "Category successfully updated");
     }
 
     public async Task<ApiResponse> Handle(DeleteCategoryCommand request, CancellationToken cancellationToken)
     {
-        var validation = await ValidateCategoryAsync(request.Id, cancellationToken);
-        if (!validation.Success)
-            return validation;
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.ExpenseCategories, request.Id, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse(validationResult.ErrorMessage!);
 
-        var entity = await dbContext.ExpenseCategories
-            .FirstOrDefaultAsync(c => c.Id == request.Id && c.IsActive, cancellationToken);
-
+        var entity = await unitOfWork.Repository<ExpenseCategory>()
+            .GetByIdAsync(request.Id);
         bool hasExpenses = await dbContext.Expenses
             .AnyAsync(e => e.CategoryId == request.Id, cancellationToken);
         if (hasExpenses)
             return new ApiResponse("Category cannot be deleted because it has expenses associated with it");
 
         entity.IsActive = false;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<ExpenseCategory>().Remove(entity);
+        await unitOfWork.CommitAsync();
 
         return new ApiResponse(true, "Category successfully deleted");
     }
 
-    private async Task<ApiResponse> ValidateCategoryAsync(long? categoryId,
-      CancellationToken cancellationToken)
-    {
-        if (!categoryId.HasValue)
-            return new ApiResponse(true, string.Empty);
-
-        var category = await dbContext.ExpenseCategories
-        .FirstOrDefaultAsync(e => e.Id == categoryId.Value, cancellationToken);
-
-        if (category == null)
-            return new ApiResponse(false, "Category not found");
-
-        if (!category.IsActive)
-            return new ApiResponse(false, "Category is inactive");
-
-        return new ApiResponse(true, string.Empty);
-    }
 }

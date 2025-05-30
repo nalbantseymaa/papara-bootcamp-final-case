@@ -2,6 +2,8 @@ using AutoMapper;
 using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs;
+using ExpenseTracking.Api.Impl.GenericValidator;
+using ExpenseTracking.Api.Impl.UnitOfWork;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
@@ -16,11 +18,15 @@ public class DepartmentCommandHandler :
 {
     private readonly AppDbContext dbContext;
     private readonly IMapper mapper;
+    private readonly IUnitOfWork unitOfWork;
+    private readonly IGenericEntityValidator genericEntityValidator;
 
-    public DepartmentCommandHandler(AppDbContext dbContext, IMapper mapper)
+    public DepartmentCommandHandler(AppDbContext dbContext, IMapper mapper, IUnitOfWork unitOfWork, IGenericEntityValidator genericEntityValidator)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
+        this.unitOfWork = unitOfWork;
+        this.genericEntityValidator = genericEntityValidator;
     }
 
     public async Task<ApiResponse<DepartmentResponse>> Handle(CreateDepartmentCommand request,
@@ -34,14 +40,14 @@ public class DepartmentCommandHandler :
 
         if (exists) return new ApiResponse<DepartmentResponse>("Department already exists");
 
-        var manager = await ValidateManagerAsync(request.Department.ManagerId, cancellationToken);
-        if (!manager.Success)
-            return new ApiResponse<DepartmentResponse>(manager.Message);
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Employees, request.Department.ManagerId, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse<DepartmentResponse>(validationResult.ErrorMessage!);
 
         var department = mapper.Map<Department>(request.Department);
 
-        await dbContext.Departments.AddAsync(department, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.Repository<Department>().AddAsync(department);
+        await unitOfWork.CommitAsync();
 
         var response = mapper.Map<DepartmentResponse>(department);
         return new ApiResponse<DepartmentResponse>(response);
@@ -50,18 +56,20 @@ public class DepartmentCommandHandler :
     public async Task<ApiResponse> Handle(UpdateDepartmentCommand request,
             CancellationToken cancellationToken)
     {
-        var (isValid, entity, errorMessage) = await ValidateDepartmentAsync(request.Id, cancellationToken);
-        if (!isValid)
-            return new ApiResponse(false, errorMessage!);
+        var validationResultDepartment = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Departments, request.Id, cancellationToken);
+        if (!validationResultDepartment.IsValid)
+            return new ApiResponse(false, validationResultDepartment.ErrorMessage!);
+        var entity = validationResultDepartment.Entity!;
         var department = request.Department;
 
         if (entity.ManagerId.HasValue && department.ManagerId.HasValue
             && entity.ManagerId.Value != department.ManagerId.Value)
             return new ApiResponse(false, "This department already has a manager");
 
-        var manager = await ValidateManagerAsync(request.Department.ManagerId, cancellationToken);
+        var validationResultManager = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Employees, department.ManagerId, cancellationToken);
+        if (!validationResultManager.IsValid)
+            return new ApiResponse(false, validationResultManager.ErrorMessage!);
 
-        if (!manager.Success) return manager;
         entity.Name = department.Name.Trim();
 
         if (!string.IsNullOrWhiteSpace(department.Description))
@@ -70,58 +78,29 @@ public class DepartmentCommandHandler :
         if (department.ManagerId.HasValue)
             entity.ManagerId = department.ManagerId.Value;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<Department>().Update(entity);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, "Department successfully updated");
     }
 
     public async Task<ApiResponse> Handle(DeleteDepartmentCommand request, CancellationToken cancellationToken)
     {
-        var (isValid, department, errorMessage) = await ValidateDepartmentAsync(request.Id, cancellationToken);
-        if (!isValid)
-            return new ApiResponse(false, errorMessage!);
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Departments, request.Id, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse(validationResult.ErrorMessage!);
 
         var activeEmployees = await dbContext.Employees
-            .Where(e => e.DepartmentId == department.Id && e.IsActive)
+            .Where(e => e.DepartmentId == validationResult.Entity!.Id && e.IsActive)
             .CountAsync(cancellationToken);
 
         if (activeEmployees > 0)
             return new ApiResponse("Cannot delete department with active employees");
 
-        department.IsActive = false;
+        validationResult.Entity!.IsActive = false;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<Department>().Remove(validationResult.Entity);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, "Department successfully deleted");
     }
 
-    private async Task<ApiResponse> ValidateManagerAsync(long? managerId,
-      CancellationToken cancellationToken)
-    {
-        if (!managerId.HasValue)
-            return new ApiResponse(true, string.Empty);
-
-        var manager = await dbContext.Employees
-       .FirstOrDefaultAsync(e => e.Id == managerId.Value, cancellationToken);
-
-        if (manager == null)
-            return new ApiResponse(false, "Manager not found");
-
-        if (!manager.IsActive)
-            return new ApiResponse(false, "Manager is inactive");
-
-        return new ApiResponse(true, string.Empty);
-    }
-
-    private async Task<(bool IsValid, Department? Department, string? ErrorMessage)> ValidateDepartmentAsync(long departmentId, CancellationToken cancellationToken)
-    {
-        var department = await dbContext.Departments
-            .FirstOrDefaultAsync(d => d.Id == departmentId, cancellationToken);
-
-        if (department == null)
-            return (false, null, "Department not found");
-
-        if (!department.IsActive)
-            return (false, null, "Department is inactive");
-
-        return (true, department, null);
-    }
 }

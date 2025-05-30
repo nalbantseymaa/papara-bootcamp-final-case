@@ -27,7 +27,7 @@ public class AdressesController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ApiResponse<AddressResponse>> GetByIdAsync([FromRoute] int id)
+    public async Task<ApiResponse<AddressResponse>> GetByIdAsync([FromRoute] long id)
     {
         var operation = new GetAdressesByIdQuery(id);
         var result = await mediator.Send(operation);
@@ -59,7 +59,7 @@ public class AdressesController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<ApiResponse> Put([FromRoute] int id, [FromBody] AddressRequest Adresses)
+    public async Task<ApiResponse> Put([FromRoute] long id, [FromBody] AddressRequest Adresses)
     {
         var operation = new UpdateAddressCommand(id, Adresses);
         var result = await mediator.Send(operation);
@@ -67,7 +67,7 @@ public class AdressesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<ApiResponse> Delete([FromRoute] int id)
+    public async Task<ApiResponse> Delete([FromRoute] long id)
     {
         var operation = new DeleteAddressCommand(id);
         var result = await mediator.Send(operation);

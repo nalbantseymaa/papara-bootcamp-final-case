@@ -5,8 +5,10 @@ using AutoMapper;
 using ExpenseFileTracking.Api.Filter;
 using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Impl.Cqrs;
+using ExpenseTracking.Api.Impl.GenericValidator;
 using ExpenseTracking.Api.Impl.Service;
 using ExpenseTracking.Api.Impl.Service.Bank;
+using ExpenseTracking.Api.Impl.UnitOfWork;
 using ExpenseTracking.Api.Impl.Validation;
 using ExpenseTracking.Api.Mapper;
 using ExpenseTracking.Api.Middleware;
@@ -126,6 +128,8 @@ public class Startup
 
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IBankClient, PaparaMockClient>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IGenericEntityValidator, GenericEntityValidator>();
 
         services.Configure<HeartbeatOptions>(Configuration.GetSection("Heartbeat"));
         services.AddHostedService<HeartbeatLoggerHostedService>();

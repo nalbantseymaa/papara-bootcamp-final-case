@@ -2,8 +2,10 @@ using AutoMapper;
 using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs;
+using ExpenseTracking.Api.Impl.GenericValidator;
 using ExpenseTracking.Api.Impl.Service;
 using ExpenseTracking.Api.Impl.Service.Helper;
+using ExpenseTracking.Api.Impl.UnitOfWork;
 using ExpenseTracking.Base;
 using ExpenseTracking.Base.Enum;
 using ExpenseTracking.Schema;
@@ -20,18 +22,23 @@ IRequestHandler<DeleteEmployeeCommand, ApiResponse>
     private readonly AppDbContext dbContext;
     private readonly IMapper mapper;
     private readonly IUserService userService;
+    private readonly IUnitOfWork unitOfWork;
+    private readonly IGenericEntityValidator genericEntityValidator;
 
-    public EmployeeCommandHandler(AppDbContext dbContext, IMapper mapper, IUserService userService)
+    public EmployeeCommandHandler(AppDbContext dbContext, IMapper mapper, IUserService userService, IUnitOfWork unitOfWork, IGenericEntityValidator genericEntityValidator)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
         this.userService = userService;
+        this.unitOfWork = unitOfWork;
+        this.genericEntityValidator = genericEntityValidator;
     }
 
     public async Task<ApiResponse<CreateEmployeeResponse>> Handle(CreateEmployeeCommand request, CancellationToken cancellationToken)
     {
-        var (isValid, department, errorMessage) = await ValidateDepartmentAsync(request.Employee.DepartmentId, cancellationToken);
-        if (!isValid) return new ApiResponse<CreateEmployeeResponse>(errorMessage!);
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Departments, request.Employee.DepartmentId, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse<CreateEmployeeResponse>(validationResult.ErrorMessage!);
 
         var user = mapper.Map<UserRequest>(request.User);
 
@@ -44,8 +51,8 @@ IRequestHandler<DeleteEmployeeCommand, ApiResponse>
 
         InitializeNewEmployee(employee);
 
-        await dbContext.Employees.AddAsync(employee, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.Repository<Employee>().AddAsync(employee);
+        await unitOfWork.CommitAsync();
 
         return new ApiResponse<CreateEmployeeResponse>(new CreateEmployeeResponse
         {
@@ -57,56 +64,44 @@ IRequestHandler<DeleteEmployeeCommand, ApiResponse>
 
     public async Task<ApiResponse> Handle(UpdateEmployeeCommand request, CancellationToken cancellationToken)
     {
-        var (isValid, entity, errorMessage) = await ValidateEmployeeAsync(request.Id, cancellationToken);
-        if (!isValid)
-            return new ApiResponse(false, errorMessage!);
+        var validationResultEmployee = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Employees, request.Id, cancellationToken);
+        if (!validationResultEmployee.IsValid)
+            return new ApiResponse(false, validationResultEmployee.ErrorMessage!);
 
-        var (isValidDepartment, department, errorMessageDepartment) = await ValidateDepartmentAsync(request.Employee.DepartmentId, cancellationToken);
-        if (!isValidDepartment)
-            return new ApiResponse(false, errorMessageDepartment!);
+        var validationResultDepartment = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Departments, request.Employee.DepartmentId, cancellationToken);
+        if (!validationResultDepartment.IsValid)
+            return new ApiResponse(false, validationResultDepartment.ErrorMessage!);
 
-        var employee = await dbContext.Employees.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+        var employee = validationResultEmployee.Entity;
 
         employee.DepartmentId = (int)request.Employee.DepartmentId;
         employee.Salary = request.Employee.Salary;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<Employee>().Update(employee);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, "Employee updated successfully");
     }
 
     public async Task<ApiResponse> Handle(DeleteEmployeeCommand request, CancellationToken cancellationToken)
     {
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Employees, request.Id, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse(false, validationResult.ErrorMessage!);
+
         var employee = await dbContext.Employees
             .Include(e => e.Phones)
             .Include(e => e.Addresses)
             .Include(e => e.ManagedDepartments)
             .FirstOrDefaultAsync(e => e.Id == request.Id, cancellationToken);
 
-        var (isValid, entity, errorMessage) = await ValidateEmployeeAsync(request.Id, cancellationToken);
-        if (!isValid)
-            return new ApiResponse(false, errorMessage!);
-
         employee.IsActive = false;
         employee.Phones?.ToList().ForEach(p => p.IsActive = false);
         employee.Addresses?.ToList().ForEach(a => a.IsActive = false);
         employee.ManagedDepartments?.ToList().ForEach(d => d.ManagerId = null);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<Employee>().Remove(employee);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, "Employee successfully deleted");
-    }
-
-    private async Task<(bool IsValid, Employee? Employee, string? ErrorMessage)> ValidateEmployeeAsync(long employeeId, CancellationToken cancellationToken)
-    {
-        var employee = await dbContext.Employees
-            .FirstOrDefaultAsync(d => d.Id == employeeId, cancellationToken);
-
-        if (employee == null)
-            return (false, null, "Employee not found");
-
-        if (!employee.IsActive)
-            return (false, null, "Employee is inactive");
-
-        return (true, employee, null);
     }
 
     private void InitializeNewEmployee(Employee employee)
@@ -116,18 +111,5 @@ IRequestHandler<DeleteEmployeeCommand, ApiResponse>
         employee.IBAN = IbanGenerator.GenerateIban();
     }
 
-    private async Task<(bool IsValid, Department? Department, string? ErrorMessage)> ValidateDepartmentAsync(long departmentId, CancellationToken cancellationToken)
-    {
-        var department = await dbContext.Departments
-            .FirstOrDefaultAsync(d => d.Id == departmentId, cancellationToken);
-
-        if (department == null)
-            return (false, null, "Department not found");
-
-        if (!department.IsActive)
-            return (false, null, "Department is inactive");
-
-        return (true, department, null);
-    }
 }
 

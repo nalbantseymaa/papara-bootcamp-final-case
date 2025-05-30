@@ -2,9 +2,10 @@ using AutoMapper;
 using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs;
+using ExpenseTracking.Api.Impl.GenericValidator;
+using ExpenseTracking.Api.Impl.UnitOfWork;
 using ExpenseTracking.Api.Interfaces;
 using ExpenseTracking.Base;
-using ExpenseTracking.Schema;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,11 +19,15 @@ public class AddressCommandHandler :
 {
     private readonly AppDbContext dbContext;
     private readonly IMapper mapper;
+    private readonly IUnitOfWork unitOfWork;
+    private readonly IGenericEntityValidator genericEntityValidator;
 
-    public AddressCommandHandler(AppDbContext dbContext, IMapper mapper)
+    public AddressCommandHandler(AppDbContext dbContext, IMapper mapper, IUnitOfWork unitOfWork, IGenericEntityValidator genericEntityValidator)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
+        this.unitOfWork = unitOfWork;
+        this.genericEntityValidator = genericEntityValidator;
     }
 
     private async Task<ApiResponse> CreateAddress<T>(T request,
@@ -36,52 +41,65 @@ public class AddressCommandHandler :
             return new ApiResponse(false, $"A default address already exists for this owner {(entity.EmployeeId != null ? "employee" : "department")}.");
         }
 
-        var entry = await dbContext.Addresses.AddAsync(entity, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.Repository<Address>().AddAsync(entity);
+        await unitOfWork.CommitAsync();
 
-        var address = mapper.Map<AddressResponse>(entry.Entity);
         return new ApiResponse(true, "Address successfully created");
     }
 
     public async Task<ApiResponse> Handle(CreateAddressForEmployeeCommand request, CancellationToken cancellationToken)
-       => await CreateAddress(request, cancellationToken);
+    {
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Employees, request.EmployeeId, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse(validationResult.ErrorMessage!);
+
+        return await CreateAddress(request, cancellationToken);
+    }
 
     public async Task<ApiResponse> Handle(CreateAddressForDepartmentCommand request, CancellationToken cancellationToken)
-        => await CreateAddress(request, cancellationToken);
+    {
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Departments, request.DepartmentId, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse(validationResult.ErrorMessage!);
+
+        return await CreateAddress(request, cancellationToken);
+    }
 
     public async Task<ApiResponse> Handle(UpdateAddressCommand request, CancellationToken cancellationToken)
     {
-        var entity = await dbContext.Addresses
-            .FirstOrDefaultAsync(a => a.Id == request.Id && a.IsActive, cancellationToken);
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Addresses, request.Id, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse(validationResult.ErrorMessage!);
 
-        if (entity == null)
-            return new ApiResponse(false, "Address not found or inactive");
+        var entity = validationResult.Entity;
 
         if (request.Address.IsDefault && await CheckDefaultAddressExists(entity, cancellationToken))
         {
             return new ApiResponse(false, $"A default address already exists for this owner {(entity.EmployeeId != null ? "employee" : "department")}.");
         }
 
-        mapper.Map(request.Address, entity);
+        entity.CountryCode = request.Address.CountryCode;
+        entity.City = request.Address.City;
+        entity.District = request.Address.District;
+        entity.Street = request.Address.Street;
+        entity.ZipCode = request.Address.ZipCode;
+        entity.IsDefault = request.Address.IsDefault;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<Address>().Update(entity);
+        await unitOfWork.CommitAsync();
+
         return new ApiResponse(true, "Address successfully updated");
     }
-
     public async Task<ApiResponse> Handle(DeleteAddressCommand request, CancellationToken cancellationToken)
     {
-        var entity = await dbContext.Addresses
-            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+        var validationResult = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Addresses, request.Id, cancellationToken);
+        if (!validationResult.IsValid)
+            return new ApiResponse(validationResult.ErrorMessage!);
 
-        if (entity == null)
-            return new ApiResponse("Address not found ");
+        validationResult.Entity.IsActive = false;
 
-        if (!entity.IsActive)
-            return new ApiResponse(false, "Address is inactive");
-
-        entity.IsActive = false;
-
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<Address>().Remove(validationResult.Entity);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, "Address successfully deleted");
     }
 

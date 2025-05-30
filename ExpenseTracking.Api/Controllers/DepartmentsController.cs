@@ -27,7 +27,7 @@ public class DepartmentsController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ApiResponse<DepartmentDetailResponse>> GetByIdAsync([FromRoute] int id)
+    public async Task<ApiResponse<DepartmentDetailResponse>> GetByIdAsync([FromRoute] long id)
     {
         var operation = new GetDepartmentByIdQuery(id);
         var result = await mediator.Send(operation);
@@ -43,7 +43,7 @@ public class DepartmentsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<ApiResponse> Put([FromRoute] int id, [FromBody] DepartmentRequest Department)
+    public async Task<ApiResponse> Put([FromRoute] long id, [FromBody] DepartmentRequest Department)
     {
         var operation = new UpdateDepartmentCommand(id, Department);
         var result = await mediator.Send(operation);
@@ -51,7 +51,7 @@ public class DepartmentsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<ApiResponse> Delete([FromRoute] int id)
+    public async Task<ApiResponse> Delete([FromRoute] long id)
     {
         var operation = new DeleteDepartmentCommand(id);
         var result = await mediator.Send(operation);

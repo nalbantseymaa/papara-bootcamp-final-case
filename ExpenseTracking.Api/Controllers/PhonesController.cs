@@ -27,7 +27,7 @@ public class PhonesController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ApiResponse<PhoneResponse>> GetByIdAsync([FromRoute] int id)
+    public async Task<ApiResponse<PhoneResponse>> GetByIdAsync([FromRoute] long id)
     {
         var operation = new GetPhonesByIdQuery(id);
         var result = await mediator.Send(operation);
@@ -59,7 +59,7 @@ public class PhonesController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<ApiResponse> Put([FromRoute] int id, [FromBody] PhoneRequest Phones)
+    public async Task<ApiResponse> Put([FromRoute] long id, [FromBody] PhoneRequest Phones)
     {
         var operation = new UpdatePhoneCommand(id, Phones);
         var result = await mediator.Send(operation);
@@ -67,7 +67,7 @@ public class PhonesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<ApiResponse> Delete([FromRoute] int id)
+    public async Task<ApiResponse> Delete([FromRoute] long id)
     {
         var operation = new DeletePhoneCommand(id);
         var result = await mediator.Send(operation);

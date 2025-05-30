@@ -7,6 +7,8 @@ using ExpenseTracking.Schema;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ExpenseTracking.Api.Impl.Service;
+using ExpenseTracking.Api.Impl.GenericValidator;
+using ExpenseTracking.Api.Impl.UnitOfWork;
 
 namespace ExpenseTracking.Api.Impl.Command;
 
@@ -21,22 +23,27 @@ public class ExpenseCommandHandler :
     private readonly IMapper mapper;
     private readonly IAppSession appSession;
     private readonly IPaymentService paymentService;
+    private readonly IGenericEntityValidator genericEntityValidator;
+    private readonly IUnitOfWork unitOfWork;
 
-    public ExpenseCommandHandler(AppDbContext dbContext, IMapper mapper, IAppSession appSession, IPaymentService paymentService)
+    public ExpenseCommandHandler(AppDbContext dbContext, IMapper mapper, IAppSession appSession, IPaymentService paymentService, IGenericEntityValidator genericEntityValidator, IUnitOfWork unitOfWork)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
         this.appSession = appSession;
         this.paymentService = paymentService;
+        this.genericEntityValidator = genericEntityValidator;
+        this.unitOfWork = unitOfWork;
     }
 
     public async Task<ApiResponse<ExpenseResponse>> Handle(CreateExpenseCommand request, CancellationToken cancellationToken)
     {
-        var categoryCheck = await ValidateEntity(dbContext.ExpenseCategories, request.Expense.CategoryId, "Category", cancellationToken);
-        if (!categoryCheck.isValid) return new ApiResponse<ExpenseResponse>(categoryCheck.errorMessage!);
-
-        var paymentCheck = await ValidateEntity(dbContext.PaymentMethods, request.Expense.PaymentMethodId, "Payment Method", cancellationToken);
-        if (!paymentCheck.isValid) return new ApiResponse<ExpenseResponse>(paymentCheck.errorMessage!);
+        var validateResultCategory = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.ExpenseCategories, request.Expense.CategoryId, cancellationToken);
+        if (!validateResultCategory.IsValid)
+            return new ApiResponse<ExpenseResponse>(validateResultCategory.ErrorMessage!);
+        var validateResultPaymentMethod = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.PaymentMethods, request.Expense.PaymentMethodId, cancellationToken);
+        if (!validateResultPaymentMethod.IsValid)
+            return new ApiResponse<ExpenseResponse>(validateResultPaymentMethod.ErrorMessage!);
 
         var expenseEntity = mapper.Map<Expense>(request.Expense);
         var duplicateCheckResult = await CheckIfExpenseDuplicate(expenseEntity, cancellationToken);
@@ -46,12 +53,10 @@ public class ExpenseCommandHandler :
         var mapped = mapper.Map<Expense>(request.Expense);
         mapped.EmployeeId = Convert.ToInt64(appSession.UserId);
 
-        var entity = await dbContext.AddAsync(mapped, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        var createdExpense = await dbContext.Expenses.Include(e => e.Employee)
-           .FirstOrDefaultAsync(e => e.Id == entity.Entity.Id, cancellationToken);
-
+        await unitOfWork.Repository<Expense>().AddAsync(mapped);
+        await unitOfWork.CommitAsync();
+        var createdExpense = await unitOfWork.Repository<Expense>()
+            .GetByIdAsync(mapped.Id);
         var response = mapper.Map<ExpenseResponse>(createdExpense);
         return new ApiResponse<ExpenseResponse>(response);
     }
@@ -59,13 +64,13 @@ public class ExpenseCommandHandler :
     public async Task<ApiResponse> Handle(ApproveExpenseCommand request, CancellationToken cancellationToken)
     {
         var expense = await dbContext.Expenses.Include(e => e.Employee)
-    .FirstOrDefaultAsync(e => e.Id == request.Id, cancellationToken);
+        .FirstOrDefaultAsync(e => e.Id == request.Id, cancellationToken);
 
         if (expense == null) return new ApiResponse(false, "Expense not found.");
 
-        var expenseCheck = await ValidateEntity(dbContext.Expenses, expense.Id, "Expense", cancellationToken);
-        if (!expenseCheck.isValid) return new ApiResponse(expenseCheck.errorMessage!);
-
+        var validateResultExpense = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Expenses, request.Id, cancellationToken);
+        if (!validateResultExpense.IsValid)
+            return new ApiResponse(validateResultExpense.ErrorMessage!);
         if (expense.Status != ExpenseStatus.Pending)
             return new ApiResponse($"Cannot approve expense in {expense.Status} status. Only pending expenses can be approved.");
 
@@ -76,16 +81,18 @@ public class ExpenseCommandHandler :
         expense.ApprovedDate = DateTime.UtcNow;
         expense.IsActive = false;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<Expense>().Update(expense);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(payment.Success, payment.Message);
     }
 
     public async Task<ApiResponse> Handle(RejectExpenseCommand request, CancellationToken cancellationToken)
     {
-        var expenseCheck = await ValidateEntity(dbContext.Expenses, request.Id, "Expense", cancellationToken);
-        if (!expenseCheck.isValid) return new ApiResponse(expenseCheck.errorMessage!);
+        var validateResultExpense = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Expenses, request.Id, cancellationToken);
+        if (!validateResultExpense.IsValid)
+            return new ApiResponse(validateResultExpense.ErrorMessage!);
 
-        var expense = expenseCheck.entity!;
+        var expense = validateResultExpense.Entity!;
 
         if (expense.Status != ExpenseStatus.Pending)
             return new ApiResponse($"Cannot reject expense in {expense.Status} status. Only pending expenses can be rejected.");
@@ -97,25 +104,28 @@ public class ExpenseCommandHandler :
         expense.RejectionReason = request.RejectExpense.RejectionReason;
         expense.IsActive = false;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<Expense>().Update(expense);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, "Expense rejected successfully");
     }
 
     public async Task<ApiResponse> Handle(UpdateExpenseCommand request, CancellationToken cancellationToken)
     {
-        var expenseCheck = await ValidateEntity(dbContext.Expenses, request.Id, "Expense", cancellationToken);
-        if (!expenseCheck.isValid) return new ApiResponse(expenseCheck.errorMessage!);
+        var validateResultExpense = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Expenses, request.Id, cancellationToken);
+        if (!validateResultExpense.IsValid)
+            return new ApiResponse(validateResultExpense.ErrorMessage!);
 
-        var expense = expenseCheck.entity!;
+        var expense = validateResultExpense.Entity!;
         if (expense.Status != ExpenseStatus.Pending)
             return new ApiResponse($"Expense is already processed and cannot be updated. Current status: {expense.Status}");
 
-        var categoryCheck = await ValidateEntity(dbContext.ExpenseCategories, request.Expense.CategoryId, "Category", cancellationToken);
-        if (!categoryCheck.isValid) return new ApiResponse(categoryCheck.errorMessage!);
+        var validateResultCategory = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.ExpenseCategories, request.Id, cancellationToken);
+        if (!validateResultExpense.IsValid)
+            return new ApiResponse(validateResultExpense.ErrorMessage!);
 
-        var paymentCheck = await ValidateEntity(dbContext.PaymentMethods, request.Expense.PaymentMethodId, "Payment Method", cancellationToken);
-        if (!paymentCheck.isValid) return new ApiResponse(paymentCheck.errorMessage!);
-
+        var validateResultPaymentMethod = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.PaymentMethods, request.Id, cancellationToken);
+        if (!validateResultExpense.IsValid)
+            return new ApiResponse(validateResultExpense.ErrorMessage!);
         var e = request.Expense;
         expense.CategoryId = e.CategoryId > 0 ? e.CategoryId : expense.CategoryId;
         expense.PaymentMethodId = e.PaymentMethodId > 0 ? e.PaymentMethodId : expense.PaymentMethodId;
@@ -124,16 +134,17 @@ public class ExpenseCommandHandler :
         expense.Location = !string.IsNullOrWhiteSpace(e.Location) ? e.Location : expense.Location;
         expense.ExpenseDate = (e.ExpenseDate != default && e.ExpenseDate <= DateTime.Today) ? e.ExpenseDate : expense.ExpenseDate;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<Expense>().Update(expense);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, "Expense updated successfully");
     }
 
     public async Task<ApiResponse> Handle(DeleteExpenseCommand request, CancellationToken cancellationToken)
     {
-        var expenseCheck = await ValidateEntity(dbContext.Expenses, request.Id, "Expense", cancellationToken);
-        if (!expenseCheck.isValid) return new ApiResponse(expenseCheck.errorMessage!);
-
-        var expense = expenseCheck.entity!;
+        var validateResultExpense = await genericEntityValidator.ValidateActiveAndExistsAsync(dbContext.Expenses, request.Id, cancellationToken);
+        if (!validateResultExpense.IsValid)
+            return new ApiResponse(validateResultExpense.ErrorMessage!);
+        var expense = validateResultExpense.Entity!;
         if (expense.Status == ExpenseStatus.Pending)
             return new ApiResponse(false, $"Cannot delete expense in {expense.Status} status. Only approved and rejected expenses can be deleted.");
 
@@ -148,33 +159,9 @@ public class ExpenseCommandHandler :
             file.IsActive = false;
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        unitOfWork.Repository<Expense>().Remove(expense);
+        await unitOfWork.CommitAsync();
         return new ApiResponse(true, "Expense deleted successfully");
-    }
-
-    /// <summary>
-    /// Validates the existence and active status of an entity in the database.
-    /// </summary>
-    /// <typeparam name="T">The type of the entity being validated.</typeparam>
-    /// <param name="dbSet">The DbSet representing the collection of entities.</param>
-    /// <param name="id">The unique identifier of the entity to validate.</param>
-    /// <param name="entityName">The name of the entity type, used in error messages.</param>
-    /// <param name="token">The cancellation token to observe while awaiting the task.</param>
-    /// <returns>
-    /// A tuple containing a boolean indicating validity, an optional error message, 
-    /// and the entity if found and active.
-    /// </returns>
-    private async Task<(bool isValid, string? errorMessage, T? entity)> ValidateEntity<T>(
-    DbSet<T> dbSet, long id, string entityName, CancellationToken token) where T : class
-    {
-        var entity = await dbSet.FindAsync(new object[] { id }, token);
-        if (entity == null)
-            return (false, $"{entityName} not found", null);
-
-        if (!((BaseEntity)(object)entity).IsActive)
-            return (false, $"{entityName} is inactive", null);
-
-        return (true, null, entity);
     }
 
     public async Task<ApiResponse> CheckIfExpenseDuplicate(Expense expense, CancellationToken cancellationToken)
