@@ -8,6 +8,7 @@ using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Api.Impl.GenericValidator;
 using ExpenseTracking.Api.Impl.Service;
 using ExpenseTracking.Api.Impl.Service.Bank;
+using ExpenseTracking.Api.Impl.Service.Cache;
 using ExpenseTracking.Api.Impl.UnitOfWork;
 using ExpenseTracking.Api.Impl.Validation;
 using ExpenseTracking.Api.Mapper;
@@ -19,6 +20,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using StackExchange.Redis;
 
 namespace ExpenseTracking.Api;
 
@@ -126,13 +128,27 @@ public class Startup
             return appSession;
         });
 
+        var redisConnection = new ConfigurationOptions();
+        redisConnection.EndPoints.Add(
+            Configuration["RedisConnection:Host"],
+            Convert.ToInt32(Configuration["RedisConnection:Port"])
+        );
+        redisConnection.DefaultDatabase = 0;
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.ConfigurationOptions = redisConnection;
+            options.InstanceName = Configuration["RedisConnection:InstanceName"];
+        });
+
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IBankClient, PaparaMockClient>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IGenericEntityValidator, GenericEntityValidator>();
+        services.AddScoped(typeof(ICacheService<>), typeof(CacheService<>));
 
         services.Configure<HeartbeatOptions>(Configuration.GetSection("Heartbeat"));
         services.AddHostedService<HeartbeatLoggerHostedService>();
+        services.AddResponseCaching();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -155,6 +171,8 @@ public class Startup
         app.UseRouting();
 
         app.UseAuthorization();
+
+        app.UseResponseCaching();
 
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
     }

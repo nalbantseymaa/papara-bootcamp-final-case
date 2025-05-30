@@ -1,6 +1,8 @@
 using AutoMapper;
 using ExpenseTracking.Api.Context;
+using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs.Category;
+using ExpenseTracking.Api.Impl.Service.Cache;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
@@ -14,21 +16,20 @@ IRequestHandler<GetCategoryByIdQuery, ApiResponse<CategoryDetailResponse>>
 {
     private readonly AppDbContext dbcontext;
     private readonly IMapper mapper;
+    private readonly ICacheService<ExpenseCategory> cacheService;
 
-    public ExpenseCategoryQueryHandler(AppDbContext context, IMapper mapper)
+    public ExpenseCategoryQueryHandler(AppDbContext context, IMapper mapper, ICacheService<ExpenseCategory> cacheService)
     {
         this.dbcontext = context;
         this.mapper = mapper;
+        this.cacheService = cacheService;
     }
 
     public async Task<ApiResponse<List<CategoryResponse>>> Handle(GetAllCategoriesQuery request, CancellationToken cancellationToken)
     {
+        var expenseCategories = await cacheService.GetAllAsync<CategoryResponse>("categories");
 
-        var ExpenseCategorys = await dbcontext.ExpenseCategories
-        .ToListAsync(cancellationToken);
-        var mapped = mapper.Map<List<CategoryResponse>>(ExpenseCategorys);
-
-        return new ApiResponse<List<CategoryResponse>>(mapped);
+        return new ApiResponse<List<CategoryResponse>>(expenseCategories);
     }
 
     public async Task<ApiResponse<CategoryDetailResponse>> Handle(GetCategoryByIdQuery request, CancellationToken cancellationToken)

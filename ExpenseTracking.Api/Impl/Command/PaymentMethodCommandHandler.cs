@@ -3,6 +3,7 @@ using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs.PaymentMethod;
 using ExpenseTracking.Api.Impl.GenericValidator;
+using ExpenseTracking.Api.Impl.Service.Cache;
 using ExpenseTracking.Api.Impl.UnitOfWork;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
@@ -20,13 +21,16 @@ public class PaymentMethodCommandHandler :
     private readonly IMapper mapper;
     private readonly IGenericEntityValidator genericEntityValidator;
     private readonly IUnitOfWork unitOfWork;
+    private readonly ICacheService<PaymentMethod> cacheService;
 
-    public PaymentMethodCommandHandler(AppDbContext dbContext, IMapper mapper, IGenericEntityValidator genericEntityValidator, IUnitOfWork unitOfWork)
+
+    public PaymentMethodCommandHandler(AppDbContext dbContext, IMapper mapper, IGenericEntityValidator genericEntityValidator, IUnitOfWork unitOfWork, ICacheService<PaymentMethod> cacheService)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
         this.genericEntityValidator = genericEntityValidator;
         this.unitOfWork = unitOfWork;
+        this.cacheService = cacheService;
     }
 
     public async Task<ApiResponse<PaymentMethodResponse>> Handle(CreatePaymentMethodCommand request, CancellationToken cancellationToken)
@@ -36,6 +40,8 @@ public class PaymentMethodCommandHandler :
         var entity = await dbContext.AddAsync(mapped, cancellationToken);
         await unitOfWork.Repository<PaymentMethod>().AddAsync(mapped);
         await unitOfWork.CommitAsync();
+        var allPaymentMethods = await unitOfWork.Repository<PaymentMethod>().GetAllAsync();
+        await cacheService.SetAsync<PaymentMethod, PaymentMethodResponse>("paymentMethods", allPaymentMethods.ToList());
 
         var response = mapper.Map<PaymentMethodResponse>(entity.Entity);
         return new ApiResponse<PaymentMethodResponse>(response);
@@ -51,6 +57,8 @@ public class PaymentMethodCommandHandler :
 
         unitOfWork.Repository<PaymentMethod>().Update(entity);
         await unitOfWork.CommitAsync();
+        var allPaymentMethods = await unitOfWork.Repository<PaymentMethod>().GetAllAsync();
+        await cacheService.SetAsync<PaymentMethod, PaymentMethodResponse>("paymentMethods", allPaymentMethods.ToList());
 
         return new ApiResponse(true, "PaymentMethod successfully updated");
     }
@@ -69,6 +77,8 @@ public class PaymentMethodCommandHandler :
 
         unitOfWork.Repository<PaymentMethod>().Remove(entity);
         await unitOfWork.CommitAsync();
+        var allPaymentMethods = await unitOfWork.Repository<PaymentMethod>().GetAllAsync();
+        await cacheService.SetAsync<PaymentMethod, PaymentMethodResponse>("paymentMethods", allPaymentMethods.ToList());
         return new ApiResponse(true, "PaymentMethod successfully deleted");
     }
 }

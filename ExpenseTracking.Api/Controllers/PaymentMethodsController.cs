@@ -27,7 +27,7 @@ public class PaymentMethodsController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ApiResponse<PaymentMethodResponse>> GetByIdAsync([FromRoute] int id)
+    public async Task<ApiResponse<PaymentMethodResponse>> GetByIdAsync([FromRoute] long id)
     {
         var operation = new GetPaymentMethodByIdQuery(id);
         var result = await mediator.Send(operation);
@@ -43,7 +43,7 @@ public class PaymentMethodsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<ApiResponse> Put([FromRoute] int id, [FromBody] UpdatePaymentMethodRequest PaymentMethod)
+    public async Task<ApiResponse> Put([FromRoute] long id, [FromBody] UpdatePaymentMethodRequest PaymentMethod)
     {
         var operation = new UpdatePaymentMethodCommand(id, PaymentMethod);
         var result = await mediator.Send(operation);
@@ -51,7 +51,7 @@ public class PaymentMethodsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<ApiResponse> Delete([FromRoute] int id)
+    public async Task<ApiResponse> Delete([FromRoute] long id)
     {
         var operation = new DeletePaymentMethodCommand(id);
         var result = await mediator.Send(operation);

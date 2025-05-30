@@ -3,6 +3,7 @@ using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs.Category;
 using ExpenseTracking.Api.Impl.GenericValidator;
+using ExpenseTracking.Api.Impl.Service.Cache;
 using ExpenseTracking.Api.Impl.UnitOfWork;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
@@ -20,13 +21,16 @@ public class ExpenseCategoryCommandHandler :
     private readonly IMapper mapper;
     private readonly IUnitOfWork unitOfWork;
     private readonly IGenericEntityValidator genericEntityValidator;
+    private readonly ICacheService<ExpenseCategory> cacheService;
 
-    public ExpenseCategoryCommandHandler(AppDbContext dbContext, IMapper mapper, IUnitOfWork unitOfWork, IGenericEntityValidator genericEntityValidator)
+
+    public ExpenseCategoryCommandHandler(AppDbContext dbContext, IMapper mapper, IUnitOfWork unitOfWork, IGenericEntityValidator genericEntityValidator, ICacheService<ExpenseCategory> cacheService)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
         this.unitOfWork = unitOfWork;
         this.genericEntityValidator = genericEntityValidator;
+        this.cacheService = cacheService;
     }
 
     public async Task<ApiResponse<CategoryResponse>> Handle(CreateCategoryCommand request, CancellationToken cancellationToken)
@@ -39,6 +43,9 @@ public class ExpenseCategoryCommandHandler :
 
         await unitOfWork.Repository<ExpenseCategory>().AddAsync(mapped);
         await unitOfWork.CommitAsync();
+
+        var allCategories = await unitOfWork.Repository<ExpenseCategory>().GetAllAsync();
+        await cacheService.SetAsync<ExpenseCategory, CategoryResponse>("categories", allCategories.ToList());
 
         var response = mapper.Map<CategoryResponse>(mapped);
         return new ApiResponse<CategoryResponse>(response);
@@ -58,6 +65,8 @@ public class ExpenseCategoryCommandHandler :
 
         unitOfWork.Repository<ExpenseCategory>().Update(entity);
         await unitOfWork.CommitAsync();
+        var allCategories = await unitOfWork.Repository<ExpenseCategory>().GetAllAsync();
+        await cacheService.SetAsync<ExpenseCategory, CategoryResponse>("categories", allCategories.ToList());
         return new ApiResponse(true, "Category successfully updated");
     }
 
@@ -77,6 +86,9 @@ public class ExpenseCategoryCommandHandler :
         entity.IsActive = false;
         unitOfWork.Repository<ExpenseCategory>().Remove(entity);
         await unitOfWork.CommitAsync();
+
+        var allCategories = await unitOfWork.Repository<ExpenseCategory>().GetAllAsync();
+        await cacheService.SetAsync<ExpenseCategory, CategoryResponse>("categories", allCategories.ToList());
 
         return new ApiResponse(true, "Category successfully deleted");
     }

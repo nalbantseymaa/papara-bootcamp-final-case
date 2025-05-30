@@ -1,6 +1,8 @@
 using AutoMapper;
 using ExpenseTracking.Api.Context;
+using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs.PaymentMethod;
+using ExpenseTracking.Api.Impl.Service.Cache;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
@@ -14,21 +16,19 @@ IRequestHandler<GetPaymentMethodByIdQuery, ApiResponse<PaymentMethodResponse>>
 {
     private readonly AppDbContext dbcontext;
     private readonly IMapper mapper;
+    private readonly ICacheService<PaymentMethod> cacheService;
 
-    public PaymentMethodQueryHandler(AppDbContext context, IMapper mapper)
+    public PaymentMethodQueryHandler(AppDbContext context, IMapper mapper, ICacheService<PaymentMethod> cacheService)
     {
         this.dbcontext = context;
         this.mapper = mapper;
+        this.cacheService = cacheService;
     }
 
     public async Task<ApiResponse<List<PaymentMethodResponse>>> Handle(GetAllPaymentMethodsQuery request, CancellationToken cancellationToken)
     {
-
-        var PaymentMethods = await dbcontext.PaymentMethods
-        .ToListAsync(cancellationToken);
-        var mapped = mapper.Map<List<PaymentMethodResponse>>(PaymentMethods);
-
-        return new ApiResponse<List<PaymentMethodResponse>>(mapped);
+        var paymentMethods = await cacheService.GetAllAsync<PaymentMethodResponse>("paymentMethods");
+        return new ApiResponse<List<PaymentMethodResponse>>(paymentMethods);
     }
 
     public async Task<ApiResponse<PaymentMethodResponse>> Handle(GetPaymentMethodByIdQuery request, CancellationToken cancellationToken)

@@ -5,7 +5,7 @@ using MediatR;
 namespace ExpenseTracking.Api.Impl.Cqrs.Category;
 
 public record GetAllCategoriesQuery : IRequest<ApiResponse<List<CategoryResponse>>>;
-public record GetCategoryByIdQuery(int Id) : IRequest<ApiResponse<CategoryDetailResponse>>;
+public record GetCategoryByIdQuery(long Id) : IRequest<ApiResponse<CategoryDetailResponse>>;
 public record CreateCategoryCommand(CategoryRequest Category) : IRequest<ApiResponse<CategoryResponse>>;
-public record UpdateCategoryCommand(int Id, UpdateCategoryRequest Category) : IRequest<ApiResponse>;
-public record DeleteCategoryCommand(int Id) : IRequest<ApiResponse>;
+public record UpdateCategoryCommand(long Id, UpdateCategoryRequest Category) : IRequest<ApiResponse>;
+public record DeleteCategoryCommand(long Id) : IRequest<ApiResponse>;

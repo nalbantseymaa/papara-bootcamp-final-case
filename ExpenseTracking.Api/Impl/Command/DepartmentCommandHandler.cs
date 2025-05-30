@@ -3,6 +3,7 @@ using ExpenseTracking.Api.Context;
 using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs;
 using ExpenseTracking.Api.Impl.GenericValidator;
+using ExpenseTracking.Api.Impl.Service.Cache;
 using ExpenseTracking.Api.Impl.UnitOfWork;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
@@ -20,13 +21,15 @@ public class DepartmentCommandHandler :
     private readonly IMapper mapper;
     private readonly IUnitOfWork unitOfWork;
     private readonly IGenericEntityValidator genericEntityValidator;
+    private readonly ICacheService<Department> cacheService;
 
-    public DepartmentCommandHandler(AppDbContext dbContext, IMapper mapper, IUnitOfWork unitOfWork, IGenericEntityValidator genericEntityValidator)
+    public DepartmentCommandHandler(AppDbContext dbContext, IMapper mapper, IUnitOfWork unitOfWork, IGenericEntityValidator genericEntityValidator, ICacheService<Department> cacheService)
     {
         this.dbContext = dbContext;
         this.mapper = mapper;
         this.unitOfWork = unitOfWork;
         this.genericEntityValidator = genericEntityValidator;
+        this.cacheService = cacheService;
     }
 
     public async Task<ApiResponse<DepartmentResponse>> Handle(CreateDepartmentCommand request,
@@ -49,6 +52,8 @@ public class DepartmentCommandHandler :
         await unitOfWork.Repository<Department>().AddAsync(department);
         await unitOfWork.CommitAsync();
 
+        var allDepartments = await unitOfWork.Repository<Department>().GetAllAsync();
+        await cacheService.SetAsync<Department, DepartmentResponse>("departments", allDepartments.ToList());
         var response = mapper.Map<DepartmentResponse>(department);
         return new ApiResponse<DepartmentResponse>(response);
     }
@@ -80,6 +85,8 @@ public class DepartmentCommandHandler :
 
         unitOfWork.Repository<Department>().Update(entity);
         await unitOfWork.CommitAsync();
+        var allDepartments = await unitOfWork.Repository<Department>().GetAllAsync();
+        await cacheService.SetAsync<Department, DepartmentResponse>("departments", allDepartments.ToList());
         return new ApiResponse(true, "Department successfully updated");
     }
 
@@ -100,7 +107,12 @@ public class DepartmentCommandHandler :
 
         unitOfWork.Repository<Department>().Remove(validationResult.Entity);
         await unitOfWork.CommitAsync();
+
+        var allDepartments = await unitOfWork.Repository<Department>().GetAllAsync();
+        await cacheService.SetAsync<Department, DepartmentResponse>("departments", allDepartments.ToList());
+
         return new ApiResponse(true, "Department successfully deleted");
     }
+
 
 }

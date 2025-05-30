@@ -27,7 +27,7 @@ public class ExpenseCategoriesController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ApiResponse<CategoryDetailResponse>> GetByIdAsync([FromRoute] int id)
+    public async Task<ApiResponse<CategoryDetailResponse>> GetByIdAsync([FromRoute] long id)
     {
         var operation = new GetCategoryByIdQuery(id);
         var result = await mediator.Send(operation);
@@ -43,7 +43,7 @@ public class ExpenseCategoriesController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<ApiResponse> Put([FromRoute] int id, [FromBody] UpdateCategoryRequest Category)
+    public async Task<ApiResponse> Put([FromRoute] long id, [FromBody] UpdateCategoryRequest Category)
     {
         var operation = new UpdateCategoryCommand(id, Category);
         var result = await mediator.Send(operation);
@@ -51,7 +51,7 @@ public class ExpenseCategoriesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<ApiResponse> Delete([FromRoute] int id)
+    public async Task<ApiResponse> Delete([FromRoute] long id)
     {
         var operation = new DeleteCategoryCommand(id);
         var result = await mediator.Send(operation);

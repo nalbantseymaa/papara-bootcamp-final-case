@@ -1,6 +1,8 @@
 using AutoMapper;
 using ExpenseTracking.Api.Context;
+using ExpenseTracking.Api.Domain;
 using ExpenseTracking.Api.Impl.Cqrs;
+using ExpenseTracking.Api.Impl.Service.Cache;
 using ExpenseTracking.Base;
 using ExpenseTracking.Schema;
 using MediatR;
@@ -14,21 +16,19 @@ IRequestHandler<GetDepartmentByIdQuery, ApiResponse<DepartmentDetailResponse>>
 {
     private readonly AppDbContext dbcontext;
     private readonly IMapper mapper;
+    private readonly ICacheService<Department> cacheService;
 
-    public DepartmentQueryHandler(AppDbContext dbcontext, IMapper mapper)
+    public DepartmentQueryHandler(AppDbContext dbcontext, IMapper mapper, ICacheService<Department> cacheService)
     {
         this.dbcontext = dbcontext;
         this.mapper = mapper;
+        this.cacheService = cacheService;
     }
 
     public async Task<ApiResponse<List<DepartmentResponse>>> Handle(GetAllDepartmentsQuery request, CancellationToken cancellationToken)
     {
-
-        var Departments = await dbcontext.Departments.Include(x => x.Manager)
-        .ToListAsync(cancellationToken);
-        var mapped = mapper.Map<List<DepartmentResponse>>(Departments);
-
-        return new ApiResponse<List<DepartmentResponse>>(mapped);
+        var departments = await cacheService.GetAllAsync<DepartmentResponse>("departments");
+        return new ApiResponse<List<DepartmentResponse>>(departments);
     }
 
     public async Task<ApiResponse<DepartmentDetailResponse>> Handle(GetDepartmentByIdQuery request, CancellationToken cancellationToken)
