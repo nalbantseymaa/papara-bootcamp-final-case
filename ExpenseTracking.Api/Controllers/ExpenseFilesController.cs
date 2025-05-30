@@ -28,7 +28,7 @@ public class ExpenseFilesController : ControllerBase
 
     [HttpGet("{id}")]
     [Authorize(Roles = "Manager,Employee")]
-    public async Task<ApiResponse<ExpenseFileResponse>> GetByIdAsync([FromRoute] int id)
+    public async Task<ApiResponse<ExpenseFileResponse>> GetByIdAsync([FromRoute] long id)
     {
         var operation = new GetExpenseFileByIdQuery(id);
         var result = await mediator.Send(operation);
@@ -49,7 +49,7 @@ public class ExpenseFilesController : ControllerBase
     [HttpPut("{id}")]
     [Consumes("multipart/form-data")]
     [Authorize(Roles = "Employee")]
-    public async Task<ApiResponse> Put([FromRoute] int id, [FromForm] UpdateExpenseFileRequest ExpenseFile)
+    public async Task<ApiResponse> Put([FromRoute] long id, [FromForm] UpdateExpenseFileRequest ExpenseFile)
     {
         var operation = new UpdateExpenseFileCommand(id, ExpenseFile);
         var result = await mediator.Send(operation);
@@ -58,7 +58,7 @@ public class ExpenseFilesController : ControllerBase
 
     [HttpDelete("{id}")]
     [Authorize(Roles = "Manager,Employee")]
-    public async Task<ApiResponse> Delete([FromRoute] int id)
+    public async Task<ApiResponse> Delete([FromRoute] long id)
     {
         var operation = new DeleteExpenseFileCommand(id);
         var result = await mediator.Send(operation);

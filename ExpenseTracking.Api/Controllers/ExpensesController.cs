@@ -31,7 +31,7 @@ public class ExpenseController : ControllerBase
 
     [HttpGet("{id}")]
     [Authorize(Roles = "Manager,Employee")]
-    public async Task<ApiResponse<ExpenseResponse>> GetByIdAsync([FromRoute] int id)
+    public async Task<ApiResponse<ExpenseResponse>> GetByIdAsync([FromRoute] long id)
     {
         var operation = new GetExpenseByIdQuery(id);
         var result = await mediator.Send(operation);
@@ -60,7 +60,7 @@ public class ExpenseController : ControllerBase
 
     [HttpPut("{id}")]
     [Authorize(Roles = "Employee")]
-    public async Task<ApiResponse> Put([FromRoute] int id, [FromBody] ExpenseRequest request)
+    public async Task<ApiResponse> Put([FromRoute] long id, [FromBody] ExpenseRequest request)
     {
         var operation = new UpdateExpenseCommand(id, request);
         var result = await mediator.Send(operation);
@@ -69,7 +69,7 @@ public class ExpenseController : ControllerBase
 
     [HttpPut("approve/{expenseId}")]
     [Authorize(Roles = "Manager")]
-    public async Task<ApiResponse> Approve([FromRoute] int expenseId)
+    public async Task<ApiResponse> Approve([FromRoute] long expenseId)
     {
         var operation = new ApproveExpenseCommand(expenseId);
         var result = await mediator.Send(operation);
@@ -78,7 +78,7 @@ public class ExpenseController : ControllerBase
 
     [HttpPut("reject/{expenseId}")]
     [Authorize(Roles = "Manager")]
-    public async Task<ApiResponse> Reject([FromRoute] int expenseId, [FromBody] RejectExpenseRequest request)
+    public async Task<ApiResponse> Reject([FromRoute] long expenseId, [FromBody] RejectExpenseRequest request)
     {
         var operation = new RejectExpenseCommand(expenseId, request);
         var result = await mediator.Send(operation);
@@ -87,7 +87,7 @@ public class ExpenseController : ControllerBase
 
     [HttpDelete("{id}")]
     [Authorize(Roles = "Manager")]
-    public async Task<ApiResponse> Delete([FromRoute] int id)
+    public async Task<ApiResponse> Delete([FromRoute] long id)
     {
         var operation = new DeleteExpenseCommand(id);
         var result = await mediator.Send(operation);

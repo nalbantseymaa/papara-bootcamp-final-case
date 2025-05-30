@@ -27,7 +27,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ApiResponse<UserResponse>> GetByIdAsync([FromRoute] int id)
+    public async Task<ApiResponse<UserResponse>> GetByIdAsync([FromRoute] long id)
     {
         var operation = new GetUserByIdQuery(id);
         var result = await mediator.Send(operation);
@@ -43,7 +43,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<ApiResponse> Put([FromRoute] int id, [FromBody] UserRequest User)
+    public async Task<ApiResponse> Put([FromRoute] long id, [FromBody] UserRequest User)
     {
         var operation = new UpdateUserCommand(id, User);
         var result = await mediator.Send(operation);
@@ -51,7 +51,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<ApiResponse> Delete([FromRoute] int id)
+    public async Task<ApiResponse> Delete([FromRoute] long id)
     {
         var operation = new DeleteUserCommand(id);
         var result = await mediator.Send(operation);

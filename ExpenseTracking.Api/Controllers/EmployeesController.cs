@@ -29,7 +29,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ApiResponse<EmployeeDetailResponse>> GetByIdAsync([FromRoute] int id)
+    public async Task<ApiResponse<EmployeeDetailResponse>> GetByIdAsync([FromRoute] long id)
     {
         var operation = new GetEmployeeByIdQuery(id);
         var result = await mediator.Send(operation);
@@ -54,7 +54,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<ApiResponse> Put([FromRoute] int id, [FromBody] UpdateEmployeeRequest Employee)
+    public async Task<ApiResponse> Put([FromRoute] long id, [FromBody] UpdateEmployeeRequest Employee)
     {
         var operation = new UpdateEmployeeCommand(id, Employee);
         var result = await mediator.Send(operation);
@@ -62,7 +62,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<ApiResponse> Delete([FromRoute] int id)
+    public async Task<ApiResponse> Delete([FromRoute] long id)
     {
         var operation = new DeleteEmployeeCommand(id);
         var result = await mediator.Send(operation);

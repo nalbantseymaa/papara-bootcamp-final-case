@@ -29,7 +29,7 @@ public class ManagersController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ApiResponse<ManagerResponse>> GetByIdAsync([FromRoute] int id)
+    public async Task<ApiResponse<ManagerResponse>> GetByIdAsync([FromRoute] long id)
     {
         var operation = new GetManagerByIdQuery(id);
         var result = await mediator.Send(operation);
@@ -45,7 +45,7 @@ public class ManagersController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<ApiResponse> Put([FromRoute] int id, [FromBody] ManagerRequest Manager)
+    public async Task<ApiResponse> Put([FromRoute] long id, [FromBody] ManagerRequest Manager)
     {
         var operation = new UpdateManagerCommand(id, Manager);
         var result = await mediator.Send(operation);
@@ -53,7 +53,7 @@ public class ManagersController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<ApiResponse> Delete([FromRoute] int id)
+    public async Task<ApiResponse> Delete([FromRoute] long id)
     {
         var operation = new DeleteManagerCommand(id);
         var result = await mediator.Send(operation);
