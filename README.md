@@ -273,9 +273,441 @@ Kullanıcı Adı: employee1
 Şifre: employee123
 ```
 
-### Test Senaryoları
-1. **Admin Girişi**: Admin kullanıcı bilgileri ile giriş yapın ve kullanıcı yönetimi ekranını kontrol edin.
-2. **Gider Ekleme**: Personel rolü ile giriş yaparak yeni bir gider ekleyin.
-3. **Rapor Oluşturma**: Farklı tarihler için rapor oluşturmayı test edin.
+### Token Alma İşlemi
 
-Bu README dosyası, uygulamayı sıfırdan kurmak ve kullanmak isteyenler için rehber niteliğindedir. Herhangi bir sorunuz olursa lütfen proje yöneticinizle iletişime geçin.
+#### Login Request
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "userName": "admin",
+  "password": "123456"
+}
+```
+
+#### Login Response
+```json
+{
+  "serverDate": "2025-06-01T16:58:20.683908Z",
+  "referenceNo": "c8a5dd41-80f8-4049-aeea-1f739036f033",
+  "success": true,
+  "message": "Success",
+  "response": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "userName": "admin",
+    "expiration": "2025-06-02T09:38:20.6837886Z"
+  }
+}
+```
+
+### API İsteklerinde Token Kullanımı
+```http
+GET /api/expenses
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+---
+
+## 📚 API Dokümantasyonu
+
+### 🔐 Kimlik Doğrulama
+```http
+POST /api/auth/login          # Giriş yap
+POST /api/auth/refresh        # Token yenile
+```
+
+### 👤 Kullanıcı Yönetimi
+```http
+GET    /api/users             # Kullanıcıları listele
+POST   /api/users             # Yeni kullanıcı oluştur
+GET    /api/users/{id}        # Kullanıcı detayı
+PUT    /api/users/{id}        # Kullanıcı güncelle
+DELETE /api/users/{id}        # Kullanıcı sil
+```
+
+### 💰 Gider Yönetimi
+```http
+GET    /api/expenses                                    # Giderleri listele
+POST   /api/expenses                                    # Yeni gider oluştur
+GET    /api/expenses/{id}                              # Gider detayı
+PUT    /api/expenses/{id}                              # Gider güncelle (sadece beklemede olanlar)
+DELETE /api/expenses/{id}                              # Gider sil
+GET    /api/expenses/ByParameters?categoryId=2&paymentMethodId=2&minAmount=12&maxAmount=100&status=Approved&location=izmir
+
+# Onay İşlemleri
+PUT    /api/expenses/approve/{expenseId}               # Gideri onayla
+PUT    /api/expenses/reject/{expenseId}                # Gideri reddet
+```
+
+### 📄 Gider Dosyaları
+```http
+GET    /api/expensefiles      # Dosyaları listele
+POST   /api/expensefiles      # Dosya yükle
+GET    /api/expensefiles/{id} # Dosya detayı
+PUT    /api/expensefiles/{id} # Dosya güncelle
+DELETE /api/expensefiles/{id} # Dosya sil
+```
+
+### 🏷️ Kategori Yönetimi
+```http
+GET    /api/categories        # Kategorileri listele
+POST   /api/categories        # Yeni kategori oluştur
+GET    /api/categories/{id}   # Kategori detayı
+PUT    /api/categories/{id}   # Kategori güncelle
+DELETE /api/categories/{id}   # Kategori sil
+```
+
+### 💳 Ödeme Yöntemleri
+```http
+GET    /api/payment-methods        # Ödeme yöntemlerini listele
+POST   /api/payment-methods        # Yeni ödeme yöntemi oluştur
+GET    /api/payment-methods/{id}   # Ödeme yöntemi detayı
+PUT    /api/payment-methods/{id}   # Ödeme yöntemi güncelle
+DELETE /api/payment-methods/{id}   # Ödeme yöntemi sil
+```
+
+### 🏢 Departman Yönetimi
+```http
+GET    /api/departments        # Departmanları listele
+POST   /api/departments        # Yeni departman oluştur
+GET    /api/departments/{id}   # Departman detayı
+PUT    /api/departments/{id}   # Departman güncelle
+DELETE /api/departments/{id}   # Departman sil
+```
+
+### 👨‍💼 Çalışan Yönetimi
+```http
+GET    /api/employees                                          # Çalışanları listele
+POST   /api/employees                                          # Yeni çalışan oluştur
+GET    /api/employees/{id}                                     # Çalışan detayı
+PUT    /api/employees/{id}                                     # Çalışan güncelle
+DELETE /api/employees/{id}                                     # Çalışan sil
+GET    /api/employees/ByParameters?departmentId=2&minSalary=102&MaxSalary=500
+```
+
+### 📍 Adres Yönetimi
+```http
+GET    /api/addresses                                          # Adresleri listele
+GET    /api/addresses/{id}                                     # Adres detayı
+PUT    /api/addresses/{id}                                     # Adres güncelle
+DELETE /api/addresses/{id}                                     # Adres sil
+GET    /api/addresses/ByParameters?city=Ankara&zipCode=06000
+POST   /api/employees/{employeeId}/addresses                   # Çalışana adres ekle
+POST   /api/departments/{departmentId}/addresses               # Departmana adres ekle
+```
+
+### 📞 Telefon Yönetimi
+```http
+GET    /api/phones            # Telefonları listele
+GET    /api/phones/{id}       # Telefon detayı
+PUT    /api/phones/{id}       # Telefon güncelle
+DELETE /api/phones/{id}       # Telefon sil
+POST   /api/employees/{id}/phones      # Çalışana telefon ekle
+POST   /api/departments/{id}/phones    # Departmana telefon ekle
+POST   /api/managers/{id}/phones       # Yöneticiye telefon ekle
+```
+
+### 👨‍💼 Yönetici İşlemleri
+```http
+GET    /api/managers          # Yöneticileri listele
+POST   /api/managers          # Yeni yönetici oluştur
+GET    /api/managers/{id}     # Yönetici detayı
+PUT    /api/managers/{id}     # Yönetici güncelle
+DELETE /api/managers/{id}     # Yönetici sil
+```
+
+### 📊 Raporlama
+```http
+# Genel Şirket Raporu (period: Daily, Weekly, Monthly)
+GET /api/Reports/company/total?period=Daily
+
+# Statüye Göre Rapor
+GET /api/Reports/company/by-status?period=Daily
+
+# Çalışan Bazlı Rapor
+GET /api/Reports/company/by-employee?period=Weekly&employeeId=2
+
+# Kendi Masraflarım (Personel için)
+GET /api/Reports/GetEmployeeExpenses
+```
+
+---
+
+## 🔒 Güvenlik ve Şifreleme
+
+### Şifre Güvenliği
+- **SHA256 Hash Algoritması**: Tüm şifreler güvenli şekilde hashlenir
+- **Rastgele Şifre Oluşturma**: İlk kurulumda güvenli şifreler otomatik oluşturulur
+- **Şifreler Hiçbir Zaman Açık Saklanmaz**: Veritabanında sadece hash değeri tutulur
+
+### JWT Token Güvenliği
+- **Güvenli Secret Key**: En az 32 karakter uzunluğunda
+- **Token Süresi Yönetimi**: Configurable expiration time
+- **Refresh Token**: Otomatik token yenileme
+
+### API Güvenliği
+- **Rol Bazlı Yetkilendirme**: Her endpoint için uygun rol kontrolü
+- **Input Validation**: FluentValidation ile güçlü doğrulama
+- **CORS Policy**: Güvenli cross-origin istekler
+
+---
+
+## 🚀 Redis Cache Sistemi
+
+### Cache Edilen Veriler
+Redis ile performans optimizasyonu için şu veriler cache'lenir:
+
+- **Expense Categories (Gider Kategorileri)**
+- **Payment Methods (Ödeme Yöntemleri)**
+- **Departments (Departmanlar)**
+
+### Redis Kullanımının Avantajları
+
+#### 🔥 Performans Artışı
+- Sık sorgulanan master veriler RAM'de tutulur
+- Veritabanı yükü azalır
+- Yanıt süreleri dramatik olarak kısalır
+
+#### ⚡ Hız Optimizasyonu
+- Kategori listesi gibi sık erişilen veriler milisaniyede döner
+- Network trafiği azalır
+- Concurrent user desteği artar
+
+#### 🔄 Veri Tutarlılığı
+- Cache invalidation stratejileri ile güncel veri garantisi
+- TTL (Time To Live) ayarları ile otomatik temizlik
+- Master data değiştiğinde cache otomatik güncellenir
+
+### Redis Yapılandırması
+```json
+{
+  "Redis": {
+    "Configuration": "localhost:6379",
+    "InstanceName": "ExpenseTracking",
+    "DefaultTTL": 3600
+  }
+}
+```
+
+---
+
+## 📋 Audit Log Sistemi
+
+### Otomatik İşlem Kayıtları
+Sistemimizde tüm veri ekleme, güncelleme ve silme işlemleri otomatik olarak kaydedilir:
+
+#### 📝 Kayıt Edilen Bilgiler
+- **Kullanıcı Bilgisi**: Hangi kullanıcı işlemi gerçekleştirdi
+- **İşlem Türü**: Create, Update, Delete
+- **Tablo/Entity**: Hangi veri üzerinde işlem yapıldı
+- **Eski/Yeni Değerler**: Değişiklik detayları
+- **Timestamp**: İşlem zamanı
+- **IP Adresi**: İsteğin geldiği adres
+
+#### 🎯 Kullanım Alanları
+- **Güvenlik İzleme**: Şüpheli aktivitelerin tespiti
+- **Şeffaflık**: İşlem geçmişinin takibi
+- **Yasal Gereklilikler**: Compliance ve audit ihtiyaçları
+- **Hata Ayıklama**: Sorunların kökenini bulma
+
+#### 🔍 Erişim
+Audit log kayıtları sistem yöneticileri tarafından incelenebilir ve gerektiğinde raporlanabilir.
+
+---
+
+## 📊 Raporlama Sistemi
+
+### Şirket Genel Raporları
+
+#### 📈 Toplam Gider Raporu
+```http
+GET /api/Reports/company/total?period=Daily
+GET /api/Reports/company/total?period=Weekly
+GET /api/Reports/company/total?period=Monthly
+```
+
+#### 📊 Statü Bazlı Raporlar
+```http
+GET /api/Reports/company/by-status?period=Daily
+```
+- Onaylanan giderler
+- Reddedilen giderler
+- Bekleyen giderler
+
+### Çalışan Bazlı Raporlar
+
+#### 👤 Çalışan Detay Raporu
+```http
+GET /api/Reports/company/by-employee?period=Weekly&employeeId=2
+```
+
+#### 📱 Kişisel Gider Raporu
+```http
+GET /api/Reports/GetEmployeeExpenses
+```
+*Not: Çalışanlar sadece kendi giderlerini görebilir*
+
+### Rapor Özellikleri
+- **Zaman Bazlı Filtreleme**: Günlük, haftalık, aylık
+- **Kategori Bazlı Analiz**: Hangi kategoride ne kadar harcandı
+- **Trend Analizi**: Gider artış/azalış trendleri
+- **Export Özelliği**: Excel/PDF formatında indirme
+
+---
+
+## 🧪 Test Rehberi
+
+### 1. 🔐 Admin Girişi Testi
+```bash
+# Admin rolü  ile giriş yap
+POST /api/auth/login
+{
+  "userName": "admin",
+  "password": "123456"
+}
+```
+
+### 2. 💰 Gider Ekleme Testi
+```bash
+# Personel rolü ile gider ekle
+POST /api/expenses
+{
+  "amount": 100.50,
+  "description": "Yakıt gideri",
+  "categoryId": 1,
+  "paymentMethodId": 1,
+  "location": "Istanbul"
+}
+```
+
+### 3. ✅ Gider Onaylama Testi
+```bash
+# Admin ile gider onayla
+PUT /api/expenses/approve/1
+```
+
+### 4. 📊 Rapor Testi
+```bash
+# Günlük rapor al
+GET /api/Reports/company/total?period=Daily
+```
+---
+
+## 🐛 Sorun Giderme
+
+### Yaygın Sorunlar ve Çözümleri
+
+#### Docker Container Başlatma Sorunu
+```bash
+# Container'ları kontrol et
+docker ps -a
+
+# Durdurulmuş container'ı başlat
+docker start mssql
+docker start redis-expense
+
+# Container loglarını kontrol et
+docker logs mssql
+```
+
+#### Veritabanı Bağlantı Hatası
+```bash
+# Connection string'i kontrol et
+# appsettings.json dosyasındaki bilgileri doğrula
+# SQL Server container'ının çalıştığından emin ol
+docker ps | grep mssql
+```
+
+#### Migration Hatası
+```bash
+# Mevcut migration'ları kontrol et
+dotnet ef migrations list
+
+# Database'i temizle ve yeniden oluştur
+dotnet ef database drop
+dotnet ef database update
+```
+
+#### Redis Bağlantı Sorunu
+```bash
+# Redis container'ını kontrol et
+docker ps | grep redis
+
+# Redis'e bağlantı testi
+docker exec -it redis-expense redis-cli ping
+```
+
+#### JWT Token Hatası
+```bash
+# Token süresini kontrol et
+# Secret key yapılandırmasını doğrula
+# appsettings.json'daki JwtConfig bölümünü kontrol et
+```
+
+### Log Dosyaları
+Sistem logları Serilog ile kaydedilir. Hata ayıklama için log dosyalarını kontrol edin:
+- **Application Logs**: `logs/` dizini
+- **Error Logs**: Kritik hatalar ayrı dosyada tutulur
+
+---
+
+## 🏗️ Mimari ve Tasarım Prensipleri
+
+### Katmanlı Mimari
+- **API Layer**: Controller'lar ve middleware'ler
+- **Service Layer**: İş mantığı ve servisler
+- **Repository Layer**: Veri erişim katmanı
+- **Schema Layer**: DTO ve response modelleri
+
+### Tasarım Desenleri
+- **Generic Repository Pattern**: Kod tekrarını azaltma
+- **Unit of Work Pattern**: İşlem yönetimi
+- **Dependency Injection**: Gevşek bağlılık
+- **Middleware Pattern**: Cross-cutting concerns
+
+### Kod Kalitesi
+- **Clean Code**: Anlamlı isimlendirme
+- **SOLID Principles**: Genişletilebilir tasarım
+- **Single Responsibility**: Her class tek sorumlu
+- **Defensive Programming**: Güvenli kod yazımı
+
+---
+
+## 🤝 Katkıda Bulunma
+
+### Geliştirme Standartları
+- **Anlamlı değişken isimleri**
+- **25 satırı geçmeyen metotlar**
+- **Hardcoded değerler yerine constants**
+- **Kapsamlı unit testler**
+- **API dokümantasyonu güncellemeleri**
+
+### Pull Request Süreci
+1. Feature branch oluşturun
+2. Değişikliklerinizi test edin
+3. Code review sürecini takip edin
+4. Dokümantasyonu güncelleyin
+
+---
+
+## 🙏 Teşekkürler
+
+Bu proje **Patika.dev** ve **Papara** işbirliği ile düzenlenen **Kadın Yazılımcı Bootcamp** bitirme projesi olarak geliştirilmiştir.
+
+**Papara** ve **Patika.dev**'e sağladıkları eğitim fırsatı için teşekkür ederiz.
+
+
+---
+
+## 📞 İletişim ve Destek
+Bu README dosyası, uygulamayı sıfırdan kurmak ve kullanmak isteyenler için rehber niteliğindedir. 
+
+Herhangi bir sorunuz olursa lütfen aşağıdaki kanallardan ulaşın:
+
+**Proje Deposu**: https://github.com/nalbantseymaa/papara-bootcamp-final-case.git
+
+**LinkedIn**: https://www.linkedin.com/in/nalbantseyma/
+
+---
+
+*Son güncelleme: Haziran 2025*  
