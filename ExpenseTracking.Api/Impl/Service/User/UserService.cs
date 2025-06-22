@@ -21,10 +21,10 @@ public class UserService : IUserService
     public async Task<(User userEntity, string plainPassword)> CreateUserAsync(UserRequest request, string role)
     {
         if (await dbContext.Users.AnyAsync(u => u.UserName == request.UserName))
-            throw new InvalidOperationException("User name already exists");
+            throw new InvalidOperationException("Registration failed. Please check your input.");
 
         if (await dbContext.Users.AnyAsync(u => u.Email == request.Email))
-            throw new InvalidOperationException("Email already exists");
+            throw new InvalidOperationException("Registration failed. Please check your input.");
 
         var user = mapper.Map<User>(request);
         user.OpenDate = DateTime.UtcNow;
